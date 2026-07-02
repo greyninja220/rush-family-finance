@@ -1206,14 +1206,15 @@ function parsePayslip(text){
   if(supern)figures.push({label:'Superannuation',amount:supern,type:'other'});
   return{docType:'Payslip',summary:`Payslip${suggestedMember?' — '+suggestedMember:''}${net?' · net '+fmt(net):''}`,figures,suggestedMember,parser:'payslip'};
 }
+let pendingImport=null;
 function showParsedStatement(filename,parsed,statusEl){
   parsed.filename=filename;
+  pendingImport=parsed;
   const suggestedId=db.members.find(m=>m.name===parsed.suggestedMember)?.id||db.members[0]?.id;
   const figHtml=parsed.figures.map(f=>{const color=f.type==='income'?'var(--green)':f.type==='expense'?'var(--red)':f.type==='withheld'?'var(--amber)':'var(--text)';return`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span>${f.label}</span><span style="font-weight:600;color:${color}">${fmt(f.amount)}</span></div>`;}).join('');
   const months=lastMonths(6);
   const defaultMonth=guessMonthFromPeriod(parsed.period)||budgetMonth;
   const balLine=(parsed.opening!=null||parsed.closing!=null)?`<div style="font-size:12px;color:var(--text3);margin-top:6px">Opening ${parsed.opening!=null?fmt(parsed.opening):'—'} → Closing ${parsed.closing!=null?fmt(parsed.closing):'—'}</div>`:'';
-  const stash=encodeURIComponent(JSON.stringify(parsed));
   statusEl.innerHTML=`<div class="import-result">
     <div style="color:var(--green);font-weight:600;margin-bottom:4px">✅ Parsed automatically — no AI needed</div>
     <div style="font-size:13px"><strong>Type:</strong> ${parsed.docType}${parsed.period?` &nbsp;·&nbsp; <strong>Period:</strong> ${parsed.period}`:''}</div>
@@ -1223,7 +1224,7 @@ function showParsedStatement(filename,parsed,statusEl){
       <span style="font-size:12px;color:var(--text3)">Apply to</span>
       <select id="imp-member" style="width:auto">${db.members.map(m=>`<option value="${m.id}" ${m.id===suggestedId?'selected':''}>${m.name}</option>`).join('')}</select>
       <select id="imp-month" style="width:auto">${months.map(mo=>`<option value="${mo.value}" ${mo.value===defaultMonth?'selected':''}>${mo.label}</option>`).join('')}</select>
-      <button class="btn btn-sm btn-primary" onclick="applyParsed('${stash}')">Apply to budget</button>
+      <button class="btn btn-sm btn-primary" onclick="applyParsed()">Apply to budget</button>
     </div>
     <div style="font-size:11px;color:var(--text3);margin-top:6px">Internal transfers between your own Macquarie accounts are excluded so nothing's double-counted. Nothing is saved until you tap Apply.</div>
   </div>`;
@@ -1231,8 +1232,9 @@ function showParsedStatement(filename,parsed,statusEl){
 function lastMonths(n){const arr=[];const now=new Date();for(let i=0;i<n;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);arr.push({value:d.toISOString().slice(0,7),label:d.toLocaleDateString('en-AU',{month:'long',year:'numeric'})});}return arr;}
 function guessMonthFromPeriod(period){if(!period)return null;const m=period.match(/(\w+)\s+(\d{4})/);if(m&&MONTHS[m[1].slice(0,3)]!==undefined){return `${m[2]}-${String(MONTHS[m[1].slice(0,3)]+1).padStart(2,'0')}`;}return null;}
 function renderImportHistoryOnly(){if(activePage==='import')renderImport();}
-function applyParsed(stash){
-  const parsed=JSON.parse(decodeURIComponent(stash));
+function applyParsed(){
+  const parsed=pendingImport;
+  if(!parsed){toast('Nothing to apply — upload a statement first');return;}
   const mid=document.getElementById('imp-member')?.value;const month=document.getElementById('imp-month')?.value||budgetMonth;
   if(!mid)return;
   if(!db.budget[month])db.budget[month]={};if(!db.budget[month][mid])db.budget[month][mid]=[];
@@ -1249,6 +1251,7 @@ function applyParsed(stash){
   // Now (and only now) record it in import history
   db.imports.push({id:uid(),filename:parsed.filename||'Imported PDF',date:new Date().toISOString(),docType:parsed.docType,summary:parsed.summary,figures:parsed.figures});
   save();
+  pendingImport=null;
   const monthLabel=lastMonths(12).find(m=>m.value===month)?.label||month;
   const statusEl=document.getElementById('import-status');
   if(statusEl)statusEl.innerHTML=`<div class="import-result"><div style="color:var(--green);font-weight:600">✅ Applied — ${count} entries added to ${memberName(mid)}'s budget for ${monthLabel}.</div><div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm btn-secondary" onclick="goTo('budget')">View budget</button><button class="btn btn-sm btn-secondary" onclick="renderImport()">Import another</button></div></div>`;
