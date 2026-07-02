@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Family Finance Portal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<style>
+:root{--bg:#F7F8FA;--surface:#FFFFFF;--surface2:#F0F2F5;--border:#E2E6EC;--border2:#C8CDD6;--text:#1A1D23;--text2:#5A6070;--text3:#9299A8;--accent:#2563EB;--accent-light:#EFF4FF;--accent-dark:#1D4ED8;--green:#059669;--green-light:#ECFDF5;--red:#DC2626;--red-light:#FEF2F2;--amber:#D97706;--amber-light:#FFFBEB;--purple:#7C3AED;--purple-light:#F5F3FF;--teal:#0891B2;--teal-light:#ECFEFF;--radius:10px;--radius-lg:16px;--shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 12px rgba(0,0,0,.1)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.5}
+#app{display:flex;min-height:100vh}
+#sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;height:100vh;overflow-y:auto;z-index:50;transition:transform .25s}
+#main{margin-left:240px;flex:1;min-height:100vh}
+.sidebar-logo{padding:20px 20px 14px;border-bottom:1px solid var(--border)}
+.sidebar-logo h1{font-size:16px;font-weight:700;color:var(--text);letter-spacing:-.3px}
+.sidebar-logo p{font-size:11px;color:var(--text3);margin-top:2px}
+.sidebar-section{padding:12px 12px 4px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;margin:1px 8px;border-radius:var(--radius);font-size:14px;color:var(--text2);cursor:pointer;transition:background .12s,color .12s;border:none;background:none;width:calc(100% - 16px);text-align:left}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--accent-light);color:var(--accent);font-weight:600}
+.nav-item svg{width:17px;height:17px;flex-shrink:0}
+.sidebar-footer{margin-top:auto;padding:14px;border-top:1px solid var(--border)}
+.member-pill{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius);background:var(--surface2);cursor:pointer;transition:background .12s;font-size:13px}
+.member-pill:hover{background:var(--border)}
+.avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.page-header{padding:24px 28px 0}
+.page-header h2{font-size:21px;font-weight:700;letter-spacing:-.3px}
+.page-header p{color:var(--text2);font-size:13px;margin-top:3px}
+.page-content{padding:18px 28px 40px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow)}
+.card-title{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+.metric-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow)}
+.metric-label{font-size:12px;color:var(--text3);font-weight:500;margin-bottom:5px}
+.metric-value{font-size:24px;font-weight:700;letter-spacing:-.5px}
+.metric-sub{font-size:12px;color:var(--text3);margin-top:3px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;padding:9px 12px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);background:var(--surface2)}
+td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:13px;font-weight:500;color:var(--text2);margin-bottom:4px}
+input[type=text],input[type=number],input[type=email],input[type=password],input[type=date],select,textarea{width:100%;padding:8px 11px;border:1px solid var(--border2);border-radius:var(--radius);font-size:14px;color:var(--text);background:var(--surface);transition:border-color .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.input-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-dark)}
+.btn-secondary{background:var(--surface);border:1px solid var(--border2);color:var(--text2)}
+.btn-secondary:hover{background:var(--surface2)}
+.btn-danger{background:var(--red-light);color:var(--red);border:1px solid #FECACA}
+.btn-danger:hover{background:#FECACA}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-ghost{background:none;color:var(--text3);border:none;padding:5px 7px;cursor:pointer;border-radius:var(--radius)}
+.btn-ghost:hover{background:var(--surface2);color:var(--text)}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-green{background:var(--green-light);color:var(--green)}
+.badge-red{background:var(--red-light);color:var(--red)}
+.badge-amber{background:var(--amber-light);color:var(--amber)}
+.badge-blue{background:var(--accent-light);color:var(--accent)}
+.badge-purple{background:var(--purple-light);color:var(--purple)}
+.progress-bar{height:7px;background:var(--surface2);border-radius:4px;overflow:hidden;margin:5px 0 3px}
+.progress-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.progress-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text3)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;justify-content:center;align-items:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius-lg);padding:22px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-md)}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:16px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
+#lock-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:300;flex-direction:column;align-items:center;justify-content:center}
+#lock-screen.open{display:flex}
+.lock-card{background:var(--surface);border-radius:var(--radius-lg);padding:32px;width:340px;box-shadow:var(--shadow-md);text-align:center}
+.lock-card h2{font-size:19px;font-weight:700;margin-bottom:5px}
+.lock-card p{color:var(--text2);font-size:14px;margin-bottom:22px}
+.member-select-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.member-btn{padding:12px 8px;border-radius:var(--radius);border:2px solid var(--border);background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:5px}
+.member-btn:hover,.member-btn.selected{border-color:var(--accent);background:var(--accent-light);color:var(--accent)}
+.pin-dots{display:flex;gap:12px;justify-content:center;margin:14px 0}
+.pin-dot{width:13px;height:13px;border-radius:50%;border:2px solid var(--border2);transition:background .15s}
+.pin-dot.filled{background:var(--accent);border-color:var(--accent)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.pin-key{padding:13px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);font-size:17px;font-weight:600;cursor:pointer;transition:all .12s}
+.pin-key:hover{background:var(--surface2)}
+.pin-key:active{transform:scale(.95)}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:9px 18px;border-radius:var(--radius);font-size:13px;z-index:999;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1}
+.drop-zone{border:2px dashed var(--border2);border-radius:var(--radius-lg);padding:36px 20px;text-align:center;cursor:pointer;transition:all .15s;color:var(--text3)}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:var(--accent-light);color:var(--accent)}
+.drop-zone svg{width:38px;height:38px;margin:0 auto 10px;display:block}
+.import-result{background:var(--surface2);border-radius:var(--radius);padding:12px;margin-top:10px;font-size:13px;line-height:1.8}
+.fy-tabs{display:flex;gap:4px;background:var(--surface2);padding:4px;border-radius:var(--radius);width:fit-content}
+.fy-tab{padding:5px 12px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;color:var(--text2);border:none;background:none;transition:all .15s}
+.fy-tab.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.member-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.member-tab{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface);font-size:12px;font-weight:500;cursor:pointer;color:var(--text2);transition:all .15s}
+.member-tab.active{border-color:var(--accent);background:var(--accent-light);color:var(--accent)}
+.bill-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.bill-row:last-child{border-bottom:none}
+.bill-icon{width:36px;height:36px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px}
+.bill-info{flex:1;min-width:0}
+.bill-name{font-size:14px;font-weight:600}
+.bill-meta{font-size:11px;color:var(--text3);margin-top:1px}
+.bill-amount{font-size:15px;font-weight:700;white-space:nowrap}
+.section-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-row h3{font-size:15px;font-weight:600}
+.empty-state{text-align:center;padding:32px 20px;color:var(--text3)}
+.empty-state p{font-size:13px}
+.text-green{color:var(--green)}
+.text-red{color:var(--red)}
+.text-amber{color:var(--amber)}
+.text-blue{color:var(--accent)}
+.top-bar{display:none;align-items:center;gap:12px;padding:11px 16px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:40}
+#mobile-menu-btn{display:none;align-items:center;justify-content:center;width:34px;height:34px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);cursor:pointer}
+@media(max-width:900px){#sidebar{transform:translateX(-100%)}#sidebar.open{transform:translateX(0)}#main{margin-left:0}.page-header{padding:18px 16px 0}.page-content{padding:14px 16px 40px}.metric-grid{grid-template-columns:1fr 1fr}.grid-2{grid-template-columns:1fr}#mobile-menu-btn{display:flex}.top-bar{display:flex}}
+@media(max-width:600px){.metric-grid{grid-template-columns:1fr}.input-row{grid-template-columns:1fr}}
+.overlay-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:45}
+.overlay-bg.open{display:block}
+.tab-strip{display:flex;gap:2px;background:var(--surface2);padding:3px;border-radius:var(--radius);margin-bottom:16px;width:100%}
+.tab-btn{flex:1;padding:7px 10px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);border:none;background:none;transition:all .15s;text-align:center}
+.tab-btn.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.alert-banner{border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;font-size:13px;display:flex;align-items:flex-start;gap:8px}
+.alert-amber{background:var(--amber-light);border:1px solid #FDE68A;color:#92400E}
+.alert-green{background:var(--green-light);border:1px solid #A7F3D0;color:#065F46}
+.alert-red{background:var(--red-light);border:1px solid #FECACA;color:#991B1B}
+</style>
+</head>
+<body>
+<div id="auth-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:400;flex-direction:column;align-items:center;justify-content:center">
+  <div class="lock-card" style="width:320px">
+    <h2>💰 Family Finance</h2>
+    <p style="margin-bottom:18px">Sign in to sync your family's data</p>
+    <div class="field" style="text-align:left"><label>Email</label><input id="auth-email" type="email" placeholder="you@example.com"></div>
+    <div class="field" style="text-align:left"><label>Password</label><input id="auth-password" type="password" onkeydown="if(event.key==='Enter')authSignIn()"></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:6px" onclick="authSignIn()">Sign in</button>
+    <p id="auth-error" style="color:var(--red);font-size:12px;margin-top:10px;min-height:14px"></p>
+    <p style="font-size:11px;color:var(--text3);margin-top:8px">Accounts are set up once in Firebase — ask whoever configured this portal if you don't have one yet.</p>
+  </div>
+</div>
+<div id="lock-screen">
+  <div class="lock-card">
+    <h2>💰 Family Finance</h2>
+    <p id="lock-subtitle">Corey &amp; Alexandra Rush</p>
+    <div id="lock-body"></div>
+  </div>
+</div>
+<div id="app" style="display:none">
+  <div class="overlay-bg" id="overlay-bg" onclick="closeSidebar()"></div>
+  <nav id="sidebar">
+    <div class="sidebar-logo">
+      <h1>💰 Family Finance</h1>
+      <p>Rush Family · Chinchilla QLD</p>
+    </div>
+    <div class="sidebar-section">Overview</div>
+    <button class="nav-item active" data-page="dashboard" onclick="goTo('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard
+    </button>
+    <div class="sidebar-section">Money</div>
+    <button class="nav-item" data-page="income" onclick="goTo('income')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Income
+    </button>
+    <button class="nav-item" data-page="budget" onclick="goTo('budget')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Budget
+    </button>
+    <button class="nav-item" data-page="bills" onclick="goTo('bills')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Bills
+    </button>
+    <button class="nav-item" data-page="accounts" onclick="goTo('accounts')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Accounts
+    </button>
+    <button class="nav-item" data-page="tax" onclick="goTo('tax')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/></svg>Tax &amp; PAYG
+    </button>
+    <button class="nav-item" data-page="goals" onclick="goTo('goals')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="3" x2="12" y2="2"/></svg>Goals
+    </button>
+    <button class="nav-item" data-page="debt" onclick="goTo('debt')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Debt
+    </button>
+    <button class="nav-item" data-page="import" onclick="goTo('import')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>PDF Import
+    </button>
+    <div class="sidebar-section">Settings</div>
+    <button class="nav-item" data-page="settings" onclick="goTo('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M4.93 19.07l1.41-1.41M19.07 19.07l-1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>Settings
+    </button>
+    <div class="sidebar-footer">
+      <div id="sync-status" onclick="manualSync()" style="display:flex;align-items:center;gap:6px;padding:6px 8px;margin-bottom:8px;border-radius:var(--radius);background:var(--surface2);cursor:pointer;font-size:11px;color:var(--text3)">
+        <span id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0"></span>
+        <span id="sync-text">Synced</span>
+      </div>
+      <div class="member-pill" onclick="lockPortal()">
+        <div class="avatar" id="sidebar-avatar" style="background:#EFF4FF;color:#2563EB">?</div>
+        <div style="flex:1"><div id="sidebar-name" style="font-weight:600;font-size:13px">—</div><div style="font-size:11px;color:var(--text3)">Tap to switch</div></div>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </div>
+    </div>
+  </nav>
+  <div id="main">
+    <div class="top-bar">
+      <button id="mobile-menu-btn" onclick="openSidebar()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+      <span style="font-weight:700;font-size:15px">Family Finance</span>
+    </div>
+    <div id="page-dashboard" class="page"></div>
+    <div id="page-income" class="page" style="display:none"></div>
+    <div id="page-budget" class="page" style="display:none"></div>
+    <div id="page-bills" class="page" style="display:none"></div>
+    <div id="page-accounts" class="page" style="display:none"></div>
+    <div id="page-tax" class="page" style="display:none"></div>
+    <div id="page-goals" class="page" style="display:none"></div>
+    <div id="page-debt" class="page" style="display:none"></div>
+    <div id="page-import" class="page" style="display:none"></div>
+    <div id="page-settings" class="page" style="display:none"></div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-box"><h3 id="modal-title"></h3><div id="modal-body"></div></div>
+</div>
+<div id="toast"></div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ── FIREBASE SETUP ──
+// 1. Create a free project at https://console.firebase.google.com
+// 2. Enable "Realtime Database" (start in locked mode) and "Authentication" → Email/Password
+// 3. Create two users under Authentication (e.g. Corey's and Alexandra's email + a password each)
+// 4. In Realtime Database → Rules, paste: {"rules":{".read":"auth != null",".write":"auth != null"}}
+// 5. Project settings → your apps → Web app → copy the config object below
+const firebaseConfig = {
+  apiKey: "AIzaSyDi7dn_AnLeyA72ChKBHoc5ssFjQndIihU",
+  authDomain: "rush-family-finances.firebaseapp.com",
+  databaseURL: "https://rush-family-finances-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "rush-family-finances",
+  storageBucket: "rush-family-finances.firebasestorage.app",
+  messagingSenderId: "462612653933",
+  appId: "1:462612653933:web:2510c093b891f6a293dc64"
+};
+const FIREBASE_READY=firebaseConfig.apiKey!=='PASTE_YOUR_API_KEY';
+if(FIREBASE_READY){firebase.initializeApp(firebaseConfig);}
+const dbRef=FIREBASE_READY?firebase.database().ref('rush_family_finance'):null;
+let firebaseUser=null;
+
+// ── CONFIRMED FROM JUNE 2026 BANK STATEMENTS ──
+function nextDue(day){const n=new Date(),y=n.getFullYear();let m=n.getMonth();let d=new Date(y,m,day);if(d<=n)d=new Date(y,m+1,day);return d.toISOString().slice(0,10);}
+function nextWeek(){const d=new Date();d.setDate(d.getDate()+7);return d.toISOString().slice(0,10);}
+function nextFortnight(){const d=new Date();d.setDate(d.getDate()+14);return d.toISOString().slice(0,10);}
+
+const SEED={
+  members:[
+    {id:'corey',name:'Corey',role:'Parent',pin:null},
+    {id:'alexandra',name:'Alexandra',role:'Parent',pin:null}
+  ],
+  budget:{},tax:{},goals:[],imports:[],
+  debts:[
+    {id:'d1',name:'Basic Home Loan 1 (xx1441)',type:'Home loan',balance:444374.12,original:444374.12,rate:6.19,note:'Variable rate'},
+    {id:'d2',name:'Basic Home Loan 2 — Reno (xx0592)',type:'Home loan',balance:39916.00,original:39916.00,rate:6.14,note:'Variable rate — drawdown opened May 2026'},
+    {id:'d3',name:'F150 — Plenti',type:'Car loan',balance:92846.70,original:92846.70,rate:6.99,note:''},
+    {id:'d4',name:'Haval — Now Finance',type:'Car loan',balance:45241.66,original:45241.66,rate:7.45,note:'Closes Aug 2032'},
+    {id:'d5',name:'Our Money Market',type:'Personal loan',balance:0,original:0,rate:0,note:'Paid off'}
+  ],
+  // ── BILLS: corrected & verified from June statements ──
+  bills:[
+    // Basic Home Loan debits
+    {id:'b1',name:'Haval – Now Finance',icon:'🚗',color:'#ECFDF5',amount:176.26,frequency:'weekly',account:'Basic Home Loan',nextDue:nextWeek(),paid:false,note:'Weekly — Jun 2,9,16,23,30 confirmed'},
+    {id:'b2',name:'F150 – Plenti',icon:'🚗',color:'#ECFDF5',amount:1657.96,frequency:'monthly',account:'Basic Home Loan',nextDue:nextDue(4),paid:false,note:'Jun 4 confirmed'},
+    {id:'b3',name:'Allianz – F150 insurance',icon:'🛡️',color:'#ECFDF5',amount:215.32,frequency:'monthly',account:'Basic Home Loan',nextDue:nextDue(8),paid:false,note:'Jun 8 confirmed (separate policy)'},
+    {id:'b4',name:'Allianz – Haval insurance',icon:'🛡️',color:'#ECFDF5',amount:174.50,frequency:'monthly',account:'Basic Home Loan',nextDue:nextDue(10),paid:false,note:'Jun 10 confirmed (separate policy)'},
+    {id:'b5',name:'Honey Insurance',icon:'🏠',color:'#ECFDF5',amount:272.80,frequency:'monthly',account:'Basic Home Loan',nextDue:nextDue(9),paid:false,note:'Jun 9 confirmed'},
+    {id:'b6',name:'BUPA Health',icon:'🏥',color:'#FEF2F2',amount:505.84,frequency:'monthly',account:'Basic Home Loan',nextDue:nextDue(26),paid:false,note:'Jun 26 confirmed — corrected from $486.65'},
+    {id:'b7',name:'TAL Life / TPD',icon:'🛡️',color:'#F5F3FF',amount:109.55,frequency:'monthly',account:'Basic Home Loan',nextDue:nextDue(19),paid:false,note:'Jun 19 confirmed'},
+    {id:'b8',name:'Pol-Aussie – Jovie (Gosia)',icon:'🧸',color:'#F5F3FF',amount:546.00,frequency:'fortnightly',account:'Basic Home Loan',nextDue:'2026-07-07',paid:false,note:'6 days @ $91/day · Invoice 1877 due 7 Jul · gosia.oracz@pol-aussie.com.au · CBA BSB 062-692 Acc 73681763'},
+    {id:'b8b',name:'Hupper Babysitting – Jovie',icon:'🧸',color:'#EFF4FF',amount:336.00,frequency:'fortnightly',account:'Basic Home Loan',nextDue:'2026-07-28',paid:false,note:'4 sessions × 6hrs @ $14/hr · Invoice 5OSXZIGF-0012 · +61 402 169 927'},
+    {id:'b9',name:'Chinchilla CC (School)',icon:'🎒',color:'#EFF4FF',amount:376.00,frequency:'fortnightly',account:'Basic Home Loan',nextDue:nextFortnight(),paid:false,note:'Jun 12 & 26 confirmed ($376 each)'},
+    {id:'b10',name:'Our Money Market',icon:'🏦',color:'#EFF4FF',amount:328.52,frequency:'fortnightly',account:'Basic Home Loan',nextDue:nextFortnight(),paid:false,note:'Refund of $399.33 seen Jun 5'},
+    {id:'b11',name:'Mortgage top-up',icon:'🏠',color:'#EFF4FF',amount:3000.00,frequency:'monthly',account:'Basic Home Loan',nextDue:nextDue(26),paid:false,note:'$3,000 transfer Jun 26 confirmed'},
+    // Direct Card Debits (xx1458)
+    {id:'b12',name:'Netflix',icon:'📺',color:'#F5F3FF',amount:28.99,frequency:'monthly',account:'Direct Card Debits',nextDue:nextDue(16),paid:false,note:'Jun 16 confirmed'},
+    {id:'b13',name:'Xbox Game Pass',icon:'🎮',color:'#EFF4FF',amount:25.95,frequency:'monthly',account:'Direct Card Debits',nextDue:nextDue(25),paid:false,note:'Jun 25 confirmed'},
+    {id:'b14',name:'Compassion Australia',icon:'❤️',color:'#FEF2F2',amount:67.00,frequency:'monthly',account:'Direct Card Debits',nextDue:nextDue(23),paid:false,note:'Jun 23 confirmed'},
+    {id:'b15',name:'Starlink',icon:'🛰️',color:'#ECFEFF',amount:139.00,frequency:'monthly',account:'Direct Card Debits',nextDue:nextDue(3),paid:false,note:'Jun 3 confirmed'},
+    {id:'b16',name:'Microsoft 365 (annual)',icon:'💻',color:'#EFF4FF',amount:159.00,frequency:'annually',account:'Direct Card Debits',nextDue:nextDue(28),paid:false,note:'Jun 28 confirmed — annual payment'},
+    {id:'b17',name:'Audible',icon:'🎧',color:'#FFFBEB',amount:16.45,frequency:'monthly',account:'Direct Card Debits',nextDue:nextDue(20),paid:false,note:'Jun 20 confirmed — was $0 in spreadsheet'},
+    {id:'b18',name:'PlayStation',icon:'🎮',color:'#EFF4FF',amount:12.95,frequency:'monthly',account:'Direct Card Debits',nextDue:nextDue(2),paid:false,note:'Jun 2 confirmed — new, not in spreadsheet'},
+    {id:'b19',name:'Ergon Energy',icon:'💡',color:'#FFFBEB',amount:0,frequency:'monthly',account:'Basic Home Loan',nextDue:nextDue(1),paid:false,note:'Listed in spreadsheet — no debit seen in June'}
+  ]
+};
+
+// Income confirmed from statements
+const INCOME = {
+  corey: {source:'COHO Pipe Inspection', amount:4231.66, frequency:'fortnightly', dates:'10th & 24th'},
+  alexandra: {source:'Arrow Energy', amount:5315.66, frequency:'fortnightly', dates:'4th & 18th'},
+  fortnightlyTotal: 9547.32,
+  monthlyEstimate: 9547.32*2.167
+};
+
+// Projected monthly budget (from spreadsheet, unchanged)
+const PROJECTED={
+  housing:{'Mortgage / Rent':3251.66,'Phone':80,'Electricity':250,'Internet':150,'Water':100,'Rates':250,'Maintenance / Repairs':200,'Renos':0,'Heating':0,'Other':0},
+  transport:{'Vehicle payment':1806.74,'Registration':159.58,'Fuel':600,'Maintenance':100,'Car Insurance':349},
+  insurance:{'Home':272.80,'Health':505.84,'Life':0,'TPD':109.55,'Other':0},
+  food:{'Groceries':2400,'Dining out':250,'Other':0},
+  pets:{'Medical':40,'Grooming':0,'Toys':0,'Other':0},
+  personalCare:{'Medical':200,'Therapeutic care':180,'Hair / Nails':100,'Clothing':400,'Fitness':120,'Other':0},
+  entertainment:{'TV / Streaming':28.99,'Xbox':25.95,'Audible':16.45,'PlayStation':12.95,'Sport / Music':416,'Other':0},
+  loans:{'HECS':0,'Gem Visa':0,'CommBank CC':0,'Zip':0,'Other':0},
+  education:{'School':376,'Music':0,'Tutoring':0,'Pol-Aussie Babysitting (Jovie)':546,'Hupper Babysitting (Jovie)':336},
+  savings:{'Bills buffer':0,'Investment account':0,'Savings':0},
+  gifts:{'Birthdays':78.26,'Christmas':78.26,'Compassion':67,'Other':60.92},
+  guiltFree:{'Corey':0,'Alexandra':0,'Other':0}
+};
+
+const COLORS=['#2563EB','#059669','#7C3AED','#D97706','#DC2626','#0891B2'];
+let db={members:[],budget:{},tax:{},goals:[],debts:[],bills:[],imports:[]};
+let currentUser=null,activePage='dashboard',budgetMonth=new Date().toISOString().slice(0,7);
+let taxFY=currentFY(),budgetTab='overview',taxMemberFilter=null;
+let pinInput='',pinTarget=null,toastTimer;
+
+function currentFY(){const now=new Date();const y=now.getFullYear();const m=now.getMonth();return m>=6?y:y-1;}
+function fyLabel(y){return`FY ${y}–${String(y+1).slice(-2)}`;}
+const STORAGE_KEY='ffp_db_rush';
+let lastSyncAt=null,syncing=false,realtimeAttached=false;
+function hasClaudeStorage(){return typeof window.storage!=='undefined'&&window.storage;}
+async function storageGet(key){
+  if(FIREBASE_READY&&dbRef){const snap=await dbRef.once('value');return snap.exists()?{value:JSON.stringify(snap.val())}:null;}
+  if(hasClaudeStorage()){try{return await window.storage.get(key,true);}catch(e){return null;}}
+  try{const v=localStorage.getItem(key);return v?{value:v}:null;}catch(e){return null;}
+}
+async function storageSet(key,value){
+  if(FIREBASE_READY&&dbRef){await dbRef.set(JSON.parse(value));return;}
+  if(hasClaudeStorage()){try{await window.storage.set(key,value,true);return;}catch(e){}}
+  try{localStorage.setItem(key,value);}catch(e){}
+}
+async function storageDelete(key){
+  if(FIREBASE_READY&&dbRef){await dbRef.remove();return;}
+  if(hasClaudeStorage()){try{await window.storage.delete(key,true);return;}catch(e){}}
+  try{localStorage.removeItem(key);}catch(e){}
+}
+async function save(){
+  syncing=true;updateSyncIndicator();
+  try{await storageSet(STORAGE_KEY,JSON.stringify(db));lastSyncAt=new Date();}
+  catch(e){console.error('save failed',e);}
+  syncing=false;updateSyncIndicator();
+}
+async function load(){
+  try{const result=await storageGet(STORAGE_KEY);if(result&&result.value)db=JSON.parse(result.value);lastSyncAt=new Date();}
+  catch(e){/* no shared data yet — fall through to seed */}
+  if(!db.members||db.members.length===0){db=JSON.parse(JSON.stringify(SEED));await save();}
+  ['budget','tax','goals','debts','bills','imports'].forEach(k=>{if(!db[k])db[k]=Array.isArray(SEED[k])?[]:{}; });
+}
+function attachRealtimeListener(){
+  if(!FIREBASE_READY||!dbRef||realtimeAttached)return;
+  realtimeAttached=true;
+  dbRef.on('value',snap=>{
+    if(syncing||!snap.exists())return;
+    db=snap.val();
+    ['budget','tax','goals','debts','bills','imports'].forEach(k=>{if(!db[k])db[k]=Array.isArray(SEED[k])?[]:{}; });
+    lastSyncAt=new Date();
+    if(currentUser&&!document.getElementById('modal-overlay').classList.contains('open'))renderPage(activePage);
+    updateSyncIndicator();
+  });
+}
+async function manualSync(){
+  if(syncing)return;
+  syncing=true;updateSyncIndicator('Syncing…');
+  try{const result=await storageGet(STORAGE_KEY);if(result&&result.value)db=JSON.parse(result.value);lastSyncAt=new Date();}
+  catch(e){/* ignore */}
+  syncing=false;
+  if(currentUser&&!document.getElementById('modal-overlay').classList.contains('open')){renderPage(activePage);}
+  updateSyncIndicator();
+  toast('Synced with other devices');
+}
+function updateSyncIndicator(customText){
+  const dot=document.getElementById('sync-dot'),txt=document.getElementById('sync-text');
+  if(!dot||!txt)return;
+  if(customText){txt.textContent=customText;dot.style.background='var(--amber)';return;}
+  if(syncing){txt.textContent='Syncing…';dot.style.background='var(--amber)';return;}
+  if(!lastSyncAt){txt.textContent='Not synced yet';dot.style.background='var(--text3)';return;}
+  const secs=Math.round((Date.now()-lastSyncAt.getTime())/1000);
+  txt.textContent=secs<10?'Synced just now':secs<60?`Synced ${secs}s ago`:`Synced ${Math.round(secs/60)}m ago`;
+  dot.style.background='var(--green)';
+}
+setInterval(updateSyncIndicator,15000);
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&currentUser&&!FIREBASE_READY)manualSync();
+});
+
+// ── AUTH (Firebase — only used once you've pasted a real config above) ──
+function authSignIn(){
+  const email=document.getElementById('auth-email').value.trim();
+  const pass=document.getElementById('auth-password').value;
+  document.getElementById('auth-error').textContent='';
+  firebase.auth().signInWithEmailAndPassword(email,pass).catch(err=>{
+    document.getElementById('auth-error').textContent=(err.message||'Sign-in failed').replace('Firebase: ','');
+  });
+}
+function authSignOut(){if(FIREBASE_READY)firebase.auth().signOut();}
+function fmt(n){return'$'+Number(n||0).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtShort(n){n=Number(n||0);if(Math.abs(n)>=1000000)return'$'+(n/1000000).toFixed(1)+'m';if(Math.abs(n)>=1000)return'$'+(n/1000).toFixed(1)+'k';return fmt(n);}
+function uid(){return Math.random().toString(36).slice(2,9);}
+function initials(name){return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
+function memberColor(id){const idx=db.members.findIndex(m=>m.id===id);return COLORS[idx%COLORS.length];}
+function getMember(id){return db.members.find(m=>m.id===id);}
+function memberName(id){const m=getMember(id);return m?m.name:'Unknown';}
+function projectedTotal(){return Object.values(PROJECTED).reduce((s,cat)=>s+Object.values(cat).reduce((s2,v)=>s2+Number(v),0),0);}
+function billMonthly(b){const m={weekly:4.33,fortnightly:2.17,monthly:1,quarterly:0.33,annually:0.083};return Number(b.amount)*(m[b.frequency]||1);}
+
+// ── LOCK SCREEN ──
+function showLockScreen(){
+  document.getElementById('app').style.display='none';
+  document.getElementById('lock-screen').classList.add('open');
+  renderLockScreen();
+}
+function renderLockScreen(){
+  const body=document.getElementById('lock-body');
+  pinInput='';pinTarget=null;
+  body.innerHTML=`<div class="member-select-grid">${db.members.map(m=>`
+    <button class="member-btn" onclick="selectMember('${m.id}',this)">
+      <div class="avatar" style="background:${memberColor(m.id)}22;color:${memberColor(m.id)};width:36px;height:36px;font-size:13px">${initials(m.name)}</div>
+      <span>${m.name}</span>
+    </button>`).join('')}</div>
+  <div id="pin-section" style="display:none">
+    <p style="font-size:13px;color:var(--text2);margin-bottom:8px" id="pin-label">Enter PIN</p>
+    <div class="pin-dots" id="pin-dots">${[0,1,2,3].map(()=>`<div class="pin-dot"></div>`).join('')}</div>
+    <div class="pin-pad">${[1,2,3,4,5,6,7,8,9,'',0,'⌫'].map(k=>`<button class="pin-key" onclick="pinPress('${k}')" ${k===''?'style="visibility:hidden"':''}>${k}</button>`).join('')}</div>
+    <p id="pin-error" style="color:var(--red);font-size:12px;text-align:center;margin-top:8px;min-height:16px"></p>
+  </div>`;
+}
+function selectMember(id,el){
+  pinTarget=id;
+  document.querySelectorAll('.member-btn').forEach(b=>b.classList.remove('selected'));el.classList.add('selected');
+  const m=getMember(id);
+  if(!m.pin){loginAs(id);return;}
+  document.getElementById('pin-section').style.display='block';
+  document.getElementById('pin-label').textContent=`PIN for ${m.name}`;
+  pinInput='';updatePinDots();
+}
+function pinPress(k){
+  if(k==='⌫'){pinInput=pinInput.slice(0,-1);}
+  else if(pinInput.length<4&&k!==''){pinInput+=k;}
+  updatePinDots();
+  if(pinInput.length===4){setTimeout(()=>{
+    const m=getMember(pinTarget);
+    if(m.pin===pinInput){loginAs(pinTarget);}
+    else{document.getElementById('pin-error').textContent='Incorrect PIN';pinInput='';updatePinDots();}
+  },120);}
+}
+function updatePinDots(){document.querySelectorAll('.pin-dot').forEach((d,i)=>d.classList.toggle('filled',i<pinInput.length));}
+function loginAs(id){
+  currentUser=getMember(id);
+  document.getElementById('lock-screen').classList.remove('open');
+  document.getElementById('app').style.display='flex';
+  updateSidebarUser();
+  updateSyncIndicator();
+  taxMemberFilter=db.members[0]?.id||null;
+  goTo('dashboard');
+}
+function lockPortal(){currentUser=null;showLockScreen();}
+function updateSidebarUser(){
+  if(!currentUser)return;
+  const col=memberColor(currentUser.id);
+  const av=document.getElementById('sidebar-avatar');
+  av.textContent=initials(currentUser.name);av.style.background=col+'22';av.style.color=col;
+  document.getElementById('sidebar-name').textContent=currentUser.name;
+}
+
+// ── NAV ──
+function goTo(page){
+  activePage=page;
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
+  document.querySelectorAll('.page').forEach(p=>p.style.display='none');
+  document.getElementById('page-'+page).style.display='block';
+  renderPage(page);closeSidebar();
+}
+function renderPage(page){({dashboard:renderDashboard,income:renderIncome,budget:renderBudget,bills:renderBills,accounts:renderAccounts,tax:renderTax,goals:renderGoals,debt:renderDebt,import:renderImport,settings:renderSettings})[page]?.();}
+function openSidebar(){document.getElementById('sidebar').classList.add('open');document.getElementById('overlay-bg').classList.add('open');}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay-bg').classList.remove('open');}
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2500);}
+function openModal(title,html,wide){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal-box').style.maxWidth=wide?'580px':'460px';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal(e){if(!e||e.target.id==='modal-overlay')document.getElementById('modal-overlay').classList.remove('open');}
+
+// ── DASHBOARD ──
+function renderDashboard(){
+  const el=document.getElementById('page-dashboard');
+  const mk=budgetMonth;
+  const mo=db.budget[mk]||{};
+  let monInc=0,monExp=0;
+  db.members.forEach(m=>{(mo[m.id]||[]).forEach(e=>{if(e.type==='income')monInc+=Number(e.amount);else monExp+=Number(e.amount);});});
+  const surplus=monInc-monExp;
+  const totalDebt=db.debts.reduce((s,d)=>s+Number(d.balance),0);
+  const billsDue=db.bills.filter(b=>{if(b.paid)return false;return(new Date(b.nextDue)-new Date())/86400000<=7;});
+  const projMonthly=INCOME.monthlyEstimate;
+  const projExp=projectedTotal();
+  const projSurplus=projMonthly-projExp;
+  const totalBillsMonthly=db.bills.filter(b=>!b.paid).reduce((s,b)=>s+billMonthly(b),0);
+  const lastImport=db.imports.length?db.imports.reduce((a,b)=>new Date(a.date)>new Date(b.date)?a:b):null;
+  const daysSinceImport=lastImport?Math.floor((Date.now()-new Date(lastImport.date))/86400000):null;
+
+  el.innerHTML=`
+    <div class="page-header"><h2>Good ${greeting()}, ${currentUser?.name?.split(' ')[0]||'there'} 👋</h2>
+    <p>${new Date().toLocaleDateString('en-AU',{weekday:'long',year:'numeric',month:'long',day:'numeric'})} · June 2026 statements loaded</p></div>
+    <div class="page-content">
+
+      <div class="alert-banner alert-amber">
+        <span style="font-size:16px">⚠️</span>
+        <div><strong>Maternity leave budget active.</strong> Projected income based on confirmed fortnightly pays (Arrow Energy + COHO Pipe). Update the Income page when pay changes.</div>
+      </div>
+
+      ${daysSinceImport===null?`
+      <div class="alert-banner alert-amber">
+        <span style="font-size:16px">📥</span>
+        <div><strong>No statements uploaded yet.</strong> Drop in a payslip or bank statement on the PDF Import page each payday to keep this dashboard current — no more finding out after the fact. <a href="#" onclick="goTo('import')" style="color:inherit;font-weight:600">Upload now →</a></div>
+      </div>`:daysSinceImport>=14?`
+      <div class="alert-banner alert-red">
+        <span style="font-size:16px">📥</span>
+        <div><strong>${daysSinceImport} days since your last upload.</strong> It's payday territory — pop the latest payslips/statement into PDF Import so nothing sneaks past unnoticed. <a href="#" onclick="goTo('import')" style="color:inherit;font-weight:600">Upload now →</a></div>
+      </div>`:daysSinceImport>=7?`
+      <div class="alert-banner alert-amber">
+        <span style="font-size:16px">📥</span>
+        <div><strong>${daysSinceImport} days since your last upload.</strong> Worth a top-up soon if a payslip or statement has landed. <a href="#" onclick="goTo('import')" style="color:inherit;font-weight:600">Upload now →</a></div>
+      </div>`:`
+      <div class="alert-banner alert-green">
+        <span style="font-size:16px">✅</span>
+        <div><strong>Up to date.</strong> Last statement/payslip uploaded ${daysSinceImport===0?'today':daysSinceImport+' day'+(daysSinceImport!==1?'s':'')+' ago'}.</div>
+      </div>`}
+
+      <div class="metric-grid">
+        <div class="metric-card"><div class="metric-label">Projected monthly income</div><div class="metric-value text-green">${fmtShort(projMonthly)}</div><div class="metric-sub">Arrow + COHO fortnightly</div></div>
+        <div class="metric-card"><div class="metric-label">Projected monthly bills</div><div class="metric-value text-amber">${fmtShort(totalBillsMonthly)}</div><div class="metric-sub">All recurring obligations</div></div>
+        <div class="metric-card"><div class="metric-label">Projected surplus</div><div class="metric-value" style="color:${projSurplus>=0?'var(--green)':'var(--red)'}">${fmtShort(projSurplus)}</div><div class="metric-sub">Income minus all bills</div></div>
+        <div class="metric-card"><div class="metric-label">Home loan balance</div><div class="metric-value text-red">${totalDebt>0?fmtShort(totalDebt):'See Debt'}</div><div class="metric-sub">Add in Debt page</div></div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:14px">
+        <div class="card">
+          <div class="card-title">Confirmed income (fortnightly)</div>
+          <div style="margin-bottom:10px;padding:10px;background:var(--green-light);border-radius:var(--radius)">
+            <div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:2px">Corey — COHO Pipe</div>
+            <div style="font-size:20px;font-weight:700;color:var(--green)">${fmt(INCOME.corey.amount)}</div>
+            <div style="font-size:11px;color:var(--text3)">Confirmed: ${INCOME.corey.dates} each fortnight</div>
+          </div>
+          <div style="padding:10px;background:var(--accent-light);border-radius:var(--radius)">
+            <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:2px">Alexandra — Arrow Energy</div>
+            <div style="font-size:20px;font-weight:700;color:var(--accent)">${fmt(INCOME.alexandra.amount)}</div>
+            <div style="font-size:11px;color:var(--text3)">Confirmed: ${INCOME.alexandra.dates} each fortnight</div>
+          </div>
+          <div style="margin-top:10px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius);display:flex;justify-content:space-between;font-weight:700;font-size:14px">
+            <span>Combined fortnightly</span><span>${fmt(INCOME.fortnightlyTotal)}</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Bills due in 7 days</div>
+          ${billsDue.length===0?`<div class="empty-state" style="padding:16px 0"><p>✅ No bills due this week</p></div>`:''}
+          ${billsDue.slice(0,5).map(b=>{
+            const days=Math.ceil((new Date(b.nextDue)-new Date())/86400000);
+            return`<div class="bill-row">
+              <div class="bill-icon" style="background:${b.color||'#EFF4FF'}">${b.icon||'📄'}</div>
+              <div class="bill-info"><div class="bill-name">${b.name}</div><div class="bill-meta">${b.account}</div></div>
+              <div style="text-align:right"><div class="bill-amount">${fmt(b.amount)}</div><div style="font-size:11px;color:${days<=3?'var(--red)':'var(--amber)'}">${days<=0?'Overdue':days+' day'+(days!==1?'s':'')}</div></div>
+            </div>`;}).join('')}
+          ${billsDue.length>5?`<div style="font-size:12px;color:var(--text3);margin-top:8px">+${billsDue.length-5} more — <a href="#" onclick="goTo('bills')">view all</a></div>`:''}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-row"><h3>Account flow (verified June 2026)</h3><button class="btn btn-sm btn-secondary" onclick="goTo('accounts')">Details →</button></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+          ${[
+            ['Basic Home Loan (xx1441)','#059669','Hub account — salaries in, bills out','Macquarie'],
+            ['Direct Card Debits (xx1458)','#7C3AED','Shopping & subscriptions','Macquarie Platinum'],
+            ['FFF Account (xx0522)','#2563EB','$900 fortnightly — Corey day-to-day','Macquarie Platinum']
+          ].map(([name,col,desc,bank])=>`
+            <div style="border:1px solid ${col}33;background:${col}08;border-radius:var(--radius);padding:12px">
+              <div style="font-size:12px;font-weight:700;color:${col};margin-bottom:4px">${name}</div>
+              <div style="font-size:12px;color:var(--text2)">${desc}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:4px">${bank}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+
+      ${db.goals.length>0?`<div class="card" style="margin-top:14px">
+        <div class="section-row"><h3>Savings goals</h3><button class="btn btn-sm btn-secondary" onclick="goTo('goals')">Manage →</button></div>
+        ${db.goals.slice(0,3).map(g=>{const pct=Math.min(100,Math.round(Number(g.saved||0)/Number(g.target)*100));return`
+          <div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="font-weight:500">${g.name}</span><span style="color:var(--text3)">${pct}%</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${pct>=100?'var(--green)':'var(--accent)'}"></div></div>
+          <div class="progress-labels"><span>${fmt(g.saved||0)}</span><span>${fmt(g.target)}</span></div></div>`;}).join('')}
+      </div>`:''}
+    </div>`;
+}
+function greeting(){const h=new Date().getHours();return h<12?'morning':h<17?'afternoon':'evening';}
+
+// ── INCOME ──
+function renderIncome(){
+  const el=document.getElementById('page-income');
+  const mk=budgetMonth;
+  const months=getLast24Months();
+  const mo=db.budget[mk]||{};
+  let allIncome=[];
+  db.members.forEach(m=>{(mo[m.id]||[]).filter(e=>e.type==='income').forEach(e=>allIncome.push({...e,memberId:m.id}));});
+  const actualTotal=allIncome.reduce((s,e)=>s+Number(e.amount),0);
+
+  el.innerHTML=`
+    <div class="page-header"><h2>Income</h2><p>Track actual pay received each fortnight</p></div>
+    <div class="page-content">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+        <select onchange="budgetMonth=this.value;renderIncome()" style="width:auto">${months.map(m=>`<option value="${m.value}" ${m.value===budgetMonth?'selected':''}>${m.label}</option>`).join('')}</select>
+        <button class="btn btn-primary btn-sm" onclick="openAddIncome()">+ Record pay</button>
+      </div>
+      <div class="card" style="margin-bottom:14px;background:var(--green-light);border-color:#A7F3D0">
+        <div class="card-title" style="color:var(--green)">Confirmed fortnightly pays (from bank statements)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div style="background:white;border-radius:var(--radius);padding:12px;border:1px solid #A7F3D0">
+            <div style="font-weight:700;font-size:14px;color:var(--green)">Corey — COHO Pipe</div>
+            <div style="font-size:22px;font-weight:700">${fmt(4231.66)}</div>
+            <div style="font-size:12px;color:var(--text3)">10th & 24th each month · BSB 182182</div>
+          </div>
+          <div style="background:white;border-radius:var(--radius);padding:12px;border:1px solid #A7F3D0">
+            <div style="font-weight:700;font-size:14px;color:var(--accent)">Alexandra — Arrow Energy</div>
+            <div style="font-size:22px;font-weight:700">${fmt(5315.66)}</div>
+            <div style="font-size:12px;color:var(--text3)">4th & 18th each month · BSB 182182</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;display:flex;justify-content:space-between;padding:8px 12px;background:white;border-radius:var(--radius);font-weight:700;border:1px solid #A7F3D0">
+          <span>Combined per fortnight</span><span class="text-green">${fmt(9547.32)}</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-row"><h3>Actual income recorded — ${months.find(m=>m.value===budgetMonth)?.label}</h3></div>
+        ${allIncome.length===0?`<div class="empty-state" style="padding:24px 0"><p>No income recorded for this month yet.<br>Tap "+ Record pay" to log your fortnightly pays.</p></div>`:''}
+        ${allIncome.map(e=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
+          <div>
+            <div style="font-weight:500;font-size:14px">${e.description}</div>
+            <div style="font-size:12px;color:var(--text3)">${memberName(e.memberId)} · ${e.category||''} ${e.date?'· '+e.date:''}</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center"><span style="font-weight:700;color:var(--green)">${fmt(e.amount)}</span>
+          <button class="btn-ghost btn-sm" onclick="deleteBudgetEntry('${e.memberId}','${e.id}')">✕</button></div>
+        </div>`).join('')}
+        ${allIncome.length>0?`<div style="display:flex;justify-content:space-between;padding:10px 0;font-weight:700;font-size:15px;border-top:2px solid var(--border)"><span>Total recorded</span><span class="text-green">${fmt(actualTotal)}</span></div>`:''}
+      </div>
+    </div>`;
+}
+function openAddIncome(){
+  openModal('Record pay received',`
+    <div class="field"><label>Person</label><select id="be-member">${db.members.map(m=>`<option value="${m.id}">${m.name}</option>`).join('')}</select></div>
+    <div class="field"><label>Source</label><select id="be-desc" onchange="if(this.value==='other')document.getElementById('be-desc-custom').style.display='block'">
+      <option value="COHO Pipe – Wage">COHO Pipe – Wage (Corey) $4,231.66</option>
+      <option value="Arrow Energy – Wage">Arrow Energy – Wage (Alexandra) $5,315.66</option>
+      <option value="other">Other / manual entry</option>
+    </select></div>
+    <div class="field" id="be-desc-custom" style="display:none"><label>Custom description</label><input id="be-desc-text" placeholder="e.g. Bonus, overtime"></div>
+    <div class="input-row">
+      <div class="field"><label>Amount ($)</label><input id="be-amount" type="number" min="0" step="0.01" placeholder="e.g. 5315.66"></div>
+      <div class="field"><label>Date received</label><input id="be-date" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveIncome()">Record</button></div>`);
+}
+function saveIncome(){
+  const mid=document.getElementById('be-member').value;
+  const descSel=document.getElementById('be-desc').value;
+  const desc=descSel==='other'?document.getElementById('be-desc-text').value.trim():descSel;
+  const amount=parseFloat(document.getElementById('be-amount').value);
+  const date=document.getElementById('be-date').value;
+  if(!desc||!amount||amount<=0){toast('Fill in description and amount');return;}
+  if(!db.budget[budgetMonth])db.budget[budgetMonth]={};
+  if(!db.budget[budgetMonth][mid])db.budget[budgetMonth][mid]=[];
+  db.budget[budgetMonth][mid].push({id:uid(),type:'income',description:desc,amount,category:'Wages',date});
+  save();closeModal();renderIncome();toast('Pay recorded ✓');
+}
+
+// ── BUDGET ──
+function renderBudget(){
+  const el=document.getElementById('page-budget');
+  const months=getLast24Months();
+  const mk=budgetMonth;
+  const mo=db.budget[mk]||{};
+  let monInc=0,monExp=0;
+  db.members.forEach(m=>{(mo[m.id]||[]).forEach(e=>{if(e.type==='income')monInc+=Number(e.amount);else monExp+=Number(e.amount);});});
+
+  el.innerHTML=`
+    <div class="page-header"><h2>Budget</h2><p>Monthly spending versus projected</p></div>
+    <div class="page-content">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+        <select onchange="budgetMonth=this.value;renderBudget()" style="width:auto">${months.map(m=>`<option value="${m.value}" ${m.value===budgetMonth?'selected':''}>${m.label}</option>`).join('')}</select>
+        <button class="btn btn-primary btn-sm" onclick="openAddExpense()">+ Add expense</button>
+      </div>
+      <div class="tab-strip">
+        <button class="tab-btn ${budgetTab==='overview'?'active':''}" onclick="budgetTab='overview';renderBudget()">Overview</button>
+        <button class="tab-btn ${budgetTab==='expenses'?'active':''}" onclick="budgetTab='expenses';renderBudget()">Expenses</button>
+        <button class="tab-btn ${budgetTab==='projected'?'active':''}" onclick="budgetTab='projected';renderBudget()">Projected</button>
+      </div>
+      ${budgetTab==='overview'?renderBudgetOverview(mo,monInc,monExp):''}
+      ${budgetTab==='expenses'?renderBudgetExpenses(mo):''}
+      ${budgetTab==='projected'?renderBudgetProjected():''}
+    </div>`;
+}
+function renderBudgetOverview(mo,monInc,monExp){
+  const projExp=projectedTotal();
+  return`<div class="metric-grid">
+    <div class="metric-card"><div class="metric-label">Income recorded</div><div class="metric-value text-green">${monInc>0?fmt(monInc):'—'}</div><div class="metric-sub"><a href="#" onclick="goTo('income')" style="font-size:11px">Record pay →</a></div></div>
+    <div class="metric-card"><div class="metric-label">Expenses recorded</div><div class="metric-value text-red">${monExp>0?fmt(monExp):'—'}</div></div>
+    <div class="metric-card"><div class="metric-label">Surplus</div><div class="metric-value" style="color:${monInc-monExp>=0?'var(--green)':'var(--red)'}">${monInc>0||monExp>0?fmt(monInc-monExp):'—'}</div></div>
+    <div class="metric-card"><div class="metric-label">Proj. expenses</div><div class="metric-value">${fmt(projExp)}</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Spending by category (actual this month)</div>
+    ${Object.values(mo).flat().filter(e=>e.type==='expense').length===0?`<div class="empty-state" style="padding:20px 0"><p>No expenses recorded yet. Tap "+ Add expense" to start.</p></div>`:''}
+    ${(()=>{const cats={};Object.values(mo).flat().filter(e=>e.type==='expense').forEach(e=>{cats[e.category]=(cats[e.category]||0)+Number(e.amount);});const total=Object.values(cats).reduce((s,v)=>s+v,0);
+    return Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>{const pct=total>0?Math.round(amt/total*100):0;return`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span>${cat}</span><span style="font-weight:600">${fmt(amt)} <span style="color:var(--text3);font-weight:400">${pct}%</span></span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:var(--accent)"></div></div></div>`;}).join('');})()}
+  </div>`;
+}
+function renderBudgetExpenses(mo){
+  let rows=[];db.members.forEach(m=>{(mo[m.id]||[]).filter(e=>e.type==='expense').forEach(e=>rows.push({...e,memberId:m.id}));});
+  return`<div class="card">
+    <div class="section-row"><h3>Expense entries</h3><button class="btn btn-sm btn-secondary" onclick="openAddExpense()">+ Add</button></div>
+    ${rows.length===0?`<div class="empty-state" style="padding:20px 0"><p>No expenses recorded for this month.</p></div>`:''}
+    ${rows.map(e=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
+      <div><div style="font-weight:500;font-size:14px">${e.description}</div><div style="font-size:12px;color:var(--text3)">${memberName(e.memberId)} · ${e.category||''}</div></div>
+      <div style="display:flex;gap:8px;align-items:center"><span style="font-weight:600;color:var(--red)">${fmt(e.amount)}</span><button class="btn-ghost btn-sm" onclick="deleteBudgetEntry('${e.memberId}','${e.id}')">✕</button></div>
+    </div>`).join('')}
+  </div>`;
+}
+function renderBudgetProjected(){
+  return`<div class="card">
+    <div class="card-title">Projected monthly spend (from your spreadsheet + statement corrections)</div>
+    ${Object.entries({
+      'Housing':PROJECTED.housing,'Transport':PROJECTED.transport,'Insurance':PROJECTED.insurance,
+      'Food':PROJECTED.food,'Personal care':PROJECTED.personalCare,'Entertainment':PROJECTED.entertainment,
+      'Education & Childcare':PROJECTED.education,'Pets':PROJECTED.pets,'Loans':PROJECTED.loans,
+      'Savings':PROJECTED.savings,'Gifts & Donations':PROJECTED.gifts,'Guilt-free money':PROJECTED.guiltFree
+    }).map(([cat,items])=>{
+      const sub=Object.values(items).reduce((s,v)=>s+Number(v),0);if(sub===0)return'';
+      return`<div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;padding:6px 0;font-weight:600;font-size:13px;border-bottom:1px solid var(--border2)">${cat}<span>${fmt(sub)}</span></div>
+        ${Object.entries(items).filter(([,v])=>Number(v)>0).map(([item,val])=>`<div style="display:flex;justify-content:space-between;padding:5px 0 5px 12px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text2)"><span>${item}</span><span>${fmt(val)}</span></div>`).join('')}
+      </div>`;}).join('')}
+    <div style="display:flex;justify-content:space-between;font-weight:700;padding:10px 0;border-top:2px solid var(--border2);font-size:15px"><span>TOTAL</span><span class="text-red">${fmt(projectedTotal())}</span></div>
+  </div>`;
+}
+function getLast24Months(){const out=[];const d=new Date();for(let i=0;i<24;i++){const y=d.getFullYear(),mo=d.getMonth();out.push({value:`${y}-${String(mo+1).padStart(2,'0')}`,label:d.toLocaleDateString('en-AU',{year:'numeric',month:'long'})});d.setMonth(d.getMonth()-1);}return out;}
+function openAddExpense(){
+  const CATS=['Housing','Transport','Insurance','Food','Personal care','Entertainment','Education','Childcare','Pets','Gifts','Health','Other'];
+  openModal('Add expense',`
+    <div class="field"><label>Person</label><select id="be-member">${db.members.map(m=>`<option value="${m.id}">${m.name}</option>`).join('')}</select></div>
+    <div class="field"><label>Description</label><input id="be-desc" placeholder="e.g. Woolworths, Fuel"></div>
+    <div class="input-row"><div class="field"><label>Amount ($)</label><input id="be-amount" type="number" min="0" step="0.01"></div>
+    <div class="field"><label>Category</label><select id="be-cat">${CATS.map(c=>`<option>${c}</option>`).join('')}</select></div></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveExpense()">Add</button></div>`);
+}
+function saveExpense(){
+  const mid=document.getElementById('be-member').value;
+  const desc=document.getElementById('be-desc').value.trim();
+  const amount=parseFloat(document.getElementById('be-amount').value);
+  const cat=document.getElementById('be-cat').value;
+  if(!desc||!amount||amount<=0){toast('Fill in description and amount');return;}
+  if(!db.budget[budgetMonth])db.budget[budgetMonth]={};
+  if(!db.budget[budgetMonth][mid])db.budget[budgetMonth][mid]=[];
+  db.budget[budgetMonth][mid].push({id:uid(),type:'expense',description:desc,amount,category:cat});
+  save();closeModal();renderBudget();toast('Expense added');
+}
+function deleteBudgetEntry(mid,id){
+  if(!db.budget[budgetMonth]||!db.budget[budgetMonth][mid])return;
+  db.budget[budgetMonth][mid]=db.budget[budgetMonth][mid].filter(e=>e.id!==id);
+  save();renderPage(activePage);
+}
+
+// ── BILLS ──
+function renderBills(){
+  const el=document.getElementById('page-bills');
+  const now=new Date();
+  const upcoming=db.bills.filter(b=>!b.paid).sort((a,b)=>new Date(a.nextDue)-new Date(b.nextDue));
+  const paid=db.bills.filter(b=>b.paid);
+  const monthlyTotal=db.bills.filter(b=>!b.paid).reduce((s,b)=>s+billMonthly(b),0);
+  const byAcct={};db.bills.filter(b=>!b.paid).forEach(b=>{byAcct[b.account]=(byAcct[b.account]||0)+billMonthly(b);});
+
+  el.innerHTML=`
+    <div class="page-header"><h2>Bills</h2><p>All recurring bills — verified from June 2026 statements</p></div>
+    <div class="page-content">
+      <div class="metric-grid" style="margin-bottom:14px">
+        <div class="metric-card"><div class="metric-label">Est. monthly total</div><div class="metric-value text-amber">${fmt(monthlyTotal)}</div></div>
+        ${Object.entries(byAcct).map(([acct,amt])=>`<div class="metric-card"><div class="metric-label">${acct}</div><div class="metric-value" style="font-size:18px">${fmt(amt)}</div><div class="metric-sub">/month</div></div>`).join('')}
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="font-size:15px;font-weight:600">Upcoming (${upcoming.length})</h3>
+        <button class="btn btn-primary btn-sm" onclick="openAddBill()">+ Add bill</button>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        ${upcoming.length===0?`<div class="empty-state"><p>No upcoming bills</p></div>`:''}
+        ${upcoming.map(b=>{
+          const days=Math.ceil((new Date(b.nextDue)-now)/86400000);
+          const urgency=days<=3?'badge-red':days<=7?'badge-amber':'badge-green';
+          return`<div class="bill-row">
+            <div class="bill-icon" style="background:${b.color||'#EFF4FF'}">${b.icon||'📄'}</div>
+            <div class="bill-info">
+              <div class="bill-name">${b.name}</div>
+              <div class="bill-meta">${b.frequency} · ${b.account} · ${new Date(b.nextDue).toLocaleDateString('en-AU')}</div>
+              ${b.note?`<div style="font-size:10px;color:var(--text3);margin-top:1px">📋 ${b.note}</div>`:''}
+            </div>
+            <div style="text-align:right;margin-right:8px;min-width:70px">
+              <div class="bill-amount">${b.amount>0?fmt(b.amount):'TBC'}</div>
+              <span class="badge ${urgency}">${days<=0?'Overdue':days===1?'Tomorrow':days+' days'}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <button class="btn btn-sm btn-secondary" onclick="markBillPaid('${b.id}')">✓ Paid</button>
+              <button class="btn-ghost btn-sm" onclick="editBill('${b.id}')">Edit</button>
+              <button class="btn-ghost btn-sm" onclick="deleteBill('${b.id}')">✕</button>
+            </div>
+          </div>`;}).join('')}
+      </div>
+      ${paid.length?`<div class="card">
+        <div class="section-row"><h3>Paid this cycle</h3><button class="btn btn-sm btn-secondary" onclick="resetPaidBills()">Reset all</button></div>
+        ${paid.map(b=>`<div class="bill-row" style="opacity:.5">
+          <div class="bill-icon" style="background:var(--green-light)">✓</div>
+          <div class="bill-info"><div class="bill-name">${b.name}</div><div class="bill-meta">${b.frequency}</div></div>
+          <div class="bill-amount text-green">${fmt(b.amount)}</div>
+          <button class="btn-ghost btn-sm" onclick="deleteBill('${b.id}')">✕</button>
+        </div>`).join('')}
+      </div>`:''}
+    </div>`;
+}
+function openAddBill(){
+  openModal('Add bill',`
+    <div class="input-row"><div class="field"><label>Name</label><input id="bl-name" placeholder="e.g. Electricity"></div>
+    <div class="field"><label>Icon</label><select id="bl-icon"><option value="💡">💡 Power</option><option value="🚗">🚗 Car</option><option value="🏥">🏥 Health</option><option value="📱">📱 Phone</option><option value="🌐">🌐 Internet</option><option value="📺">📺 TV</option><option value="💳">💳 Credit</option><option value="🏠">🏠 Housing</option><option value="🎒">🎒 School</option><option value="🧸">🧸 Kids</option><option value="🛡️">🛡️ Insurance</option><option value="🏦">🏦 Finance</option><option value="❤️">❤️ Charity</option><option value="🛰️">🛰️ Internet</option><option value="🎮">🎮 Gaming</option><option value="🎧">🎧 Audio</option><option value="📄">📄 Other</option></select></div></div>
+    <div class="input-row"><div class="field"><label>Amount ($)</label><input id="bl-amount" type="number" min="0" step="0.01"></div>
+    <div class="field"><label>Frequency</label><select id="bl-freq"><option value="monthly">Monthly</option><option value="weekly">Weekly</option><option value="fortnightly">Fortnightly</option><option value="quarterly">Quarterly</option><option value="annually">Annually</option></select></div></div>
+    <div class="input-row"><div class="field"><label>Account</label><select id="bl-acct"><option>Basic Home Loan</option><option>Direct Card Debits</option><option>FFF Account</option></select></div>
+    <div class="field"><label>Next due date</label><input id="bl-due" type="date" value="${new Date().toISOString().slice(0,10)}"></div></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveBill()">Add</button></div>`);
+}
+function saveBill(){
+  const name=document.getElementById('bl-name').value.trim();
+  const icon=document.getElementById('bl-icon').value;
+  const amount=parseFloat(document.getElementById('bl-amount').value)||0;
+  const frequency=document.getElementById('bl-freq').value;
+  const account=document.getElementById('bl-acct').value;
+  const nextDueVal=document.getElementById('bl-due').value;
+  if(!name){toast('Enter a bill name');return;}
+  const iconColors={'💡':'#FFFBEB','🚗':'#ECFDF5','🏥':'#FEF2F2','📱':'#EFF4FF','🌐':'#ECFEFF','📺':'#F5F3FF','💳':'#FFFBEB','🏠':'#EFF4FF','🎒':'#EFF4FF','🧸':'#F5F3FF','🛡️':'#ECFDF5','🏦':'#EFF4FF','❤️':'#FEF2F2','🛰️':'#ECFEFF','🎮':'#EFF4FF','🎧':'#FFFBEB','📄':'#F0F2F5'};
+  db.bills.push({id:uid(),name,icon,color:iconColors[icon]||'#F0F2F5',amount,frequency,account,nextDue:nextDueVal,paid:false});
+  save();closeModal();renderBills();toast('Bill added');
+}
+function editBill(id){
+  const b=db.bills.find(b=>b.id===id);if(!b)return;
+  openModal('Edit bill',`
+    <div class="field"><label>Name</label><input id="ebl-name" value="${b.name}"></div>
+    <div class="input-row"><div class="field"><label>Amount ($)</label><input id="ebl-amount" type="number" value="${b.amount}" step="0.01"></div>
+    <div class="field"><label>Frequency</label><select id="ebl-freq">
+      ${['monthly','weekly','fortnightly','quarterly','annually'].map(f=>`<option value="${f}" ${b.frequency===f?'selected':''}>${f.charAt(0).toUpperCase()+f.slice(1)}</option>`).join('')}
+    </select></div></div>
+    <div class="field"><label>Next due date</label><input id="ebl-due" type="date" value="${b.nextDue}"></div>
+    <div class="field"><label>Note</label><input id="ebl-note" value="${b.note||''}"></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="updateBill('${id}')">Save</button></div>`);
+}
+function updateBill(id){
+  const b=db.bills.find(b=>b.id===id);if(!b)return;
+  b.name=document.getElementById('ebl-name').value.trim();
+  b.amount=parseFloat(document.getElementById('ebl-amount').value)||b.amount;
+  b.frequency=document.getElementById('ebl-freq').value;
+  b.nextDue=document.getElementById('ebl-due').value;
+  b.note=document.getElementById('ebl-note').value;
+  save();closeModal();renderBills();toast('Bill updated');
+}
+function markBillPaid(id){
+  const b=db.bills.find(b=>b.id===id);if(!b)return;
+  b.paid=true;
+  const d=new Date(b.nextDue);
+  ({weekly:()=>d.setDate(d.getDate()+7),fortnightly:()=>d.setDate(d.getDate()+14),monthly:()=>d.setMonth(d.getMonth()+1),quarterly:()=>d.setMonth(d.getMonth()+3),annually:()=>d.setFullYear(d.getFullYear()+1)})[b.frequency]?.();
+  b.nextDue=d.toISOString().slice(0,10);
+  save();renderBills();toast(`${b.name} marked paid ✓`);
+}
+function resetPaidBills(){db.bills.forEach(b=>b.paid=false);save();renderBills();}
+function deleteBill(id){db.bills=db.bills.filter(b=>b.id!==id);save();renderBills();}
+
+// ── ACCOUNTS ──
+function renderAccounts(){
+  const el=document.getElementById('page-accounts');
+  const hlBills=db.bills.filter(b=>b.account==='Basic Home Loan'&&!b.paid);
+  const dcBills=db.bills.filter(b=>b.account==='Direct Card Debits'&&!b.paid);
+  const hlTotal=hlBills.reduce((s,b)=>s+billMonthly(b),0);
+  const dcTotal=dcBills.reduce((s,b)=>s+billMonthly(b),0);
+  const fffAlloc=900*2.17;// $900 fortnightly recurring transfer
+
+  el.innerHTML=`
+    <div class="page-header"><h2>Accounts</h2><p>Three Macquarie accounts — flow confirmed from June 2026 statements</p></div>
+    <div class="page-content">
+      <div class="card" style="margin-bottom:14px;background:var(--accent-light);border-color:#BFDBFE">
+        <div class="card-title" style="color:var(--accent)">How money flows</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.9">
+          <strong>1.</strong> Both salaries land in <strong>Basic Home Loan (xx1441)</strong> — this is the hub.<br>
+          <strong>2.</strong> Big bills (cars, insurance, BUPA, babysitting) debit directly from xx1441.<br>
+          <strong>3.</strong> $900 recurring transfer goes to <strong>FFF Account (xx0522)</strong> every fortnight for Corey's day-to-day spending.<br>
+          <strong>4.</strong> Variable transfers go to <strong>Direct Card Debits (xx1458)</strong> for household spending, subscriptions & shopping.<br>
+          <strong>5.</strong> Mortgage top-up: $3,000 was transferred from xx1458 → xx1441 on 26 Jun.
+        </div>
+      </div>
+      <div class="metric-grid" style="margin-bottom:14px">
+        <div class="metric-card"><div class="metric-label">Basic Home Loan bills</div><div class="metric-value text-green">${fmt(hlTotal)}</div><div class="metric-sub">/month est.</div></div>
+        <div class="metric-card"><div class="metric-label">Direct Card Debits bills</div><div class="metric-value text-purple">${fmt(dcTotal)}</div><div class="metric-sub">/month est.</div></div>
+        <div class="metric-card"><div class="metric-label">FFF recurring transfer</div><div class="metric-value text-blue">${fmt(fffAlloc)}</div><div class="metric-sub">/month ($900 fortnightly)</div></div>
+        <div class="metric-card"><div class="metric-label">Total committed</div><div class="metric-value">${fmt(hlTotal+dcTotal+fffAlloc)}</div><div class="metric-sub">/month</div></div>
+      </div>
+      ${[
+        ['Basic Home Loan','#059669','xx1441','Hub account — both salaries credit here',hlBills],
+        ['Direct Card Debits','#7C3AED','xx1458','Main spending card — transfers in from xx1441',dcBills],
+        ['FFF Account','#2563EB','xx0522','Corey day-to-day — $900/fortnight recurring',[{name:'Recurring transfer from Home Loan',amount:900,frequency:'fortnightly',icon:'↔️',color:'#EFF4FF'}]]
+      ].map(([name,col,acct,desc,bills])=>`
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+            <div><div style="display:flex;align-items:center;gap:8px"><div style="width:10px;height:10px;border-radius:50%;background:${col}"></div><h3 style="font-size:15px;font-weight:700">${name}</h3><span style="font-size:12px;color:var(--text3)">${acct}</span></div>
+            <div style="font-size:13px;color:var(--text2);margin-top:3px">${desc}</div></div>
+            <span style="font-weight:700;font-size:16px">${fmt(bills.reduce((s,b)=>s+billMonthly(b),0))}/mo</span>
+          </div>
+          <table><thead><tr><th>Bill</th><th>Freq.</th><th>Monthly equiv.</th></tr></thead><tbody>
+            ${bills.map(b=>`<tr><td>${b.icon?b.icon+' ':''}<span style="font-weight:500">${b.name}</span>${b.note?`<div style="font-size:11px;color:var(--text3)">${b.note}</div>`:''}</td><td style="font-size:12px;color:var(--text3)">${b.frequency||'fixed'}</td><td style="font-weight:600">${fmt(billMonthly(b))}</td></tr>`).join('')}
+          </tbody></table>
+        </div>`).join('')}
+    </div>`;
+}
+
+// ── TAX ──
+function renderTax(){
+  const el=document.getElementById('page-tax');
+  if(!taxMemberFilter)taxMemberFilter=db.members[0]?.id;
+  const fys=[currentFY(),currentFY()-1,currentFY()-2];
+  const key=`${taxMemberFilter}_${taxFY}`;
+  const td=db.tax[key]||{income:[],deductions:[],paymentSummaries:[]};
+  const totalIncome=td.income.reduce((s,e)=>s+Number(e.amount),0);
+  const totalDed=td.deductions.reduce((s,e)=>s+Number(e.amount),0);
+  const taxable=Math.max(0,totalIncome-totalDed);
+  const estTax=calcTax(taxable);
+  const withheld=td.paymentSummaries.reduce((s,p)=>s+Number(p.withheld||0),0);
+  const refund=withheld-estTax;
+
+  el.innerHTML=`
+    <div class="page-header"><h2>Tax &amp; PAYG</h2><p>Australian tax year (July–June) — PAYG income per person</p></div>
+    <div class="page-content">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+        <div class="fy-tabs">${fys.map(y=>`<button class="fy-tab ${y===taxFY?'active':''}" onclick="taxFY=${y};renderTax()">${fyLabel(y)}</button>`).join('')}</div>
+        <button class="btn btn-primary btn-sm" onclick="openAddTaxEntry()">+ Add entry</button>
+      </div>
+      <div class="member-tabs">${db.members.map(m=>`<button class="member-tab ${m.id===taxMemberFilter?'active':''}" onclick="taxMemberFilter='${m.id}';renderTax()">
+        <div class="avatar" style="background:${memberColor(m.id)}22;color:${memberColor(m.id)};width:18px;height:18px;font-size:8px">${initials(m.name)}</div>${m.name}</button>`).join('')}</div>
+      <div class="metric-grid">
+        <div class="metric-card"><div class="metric-label">Gross income</div><div class="metric-value">${fmt(totalIncome)}</div></div>
+        <div class="metric-card"><div class="metric-label">Deductions</div><div class="metric-value text-green">${fmt(totalDed)}</div></div>
+        <div class="metric-card"><div class="metric-label">Taxable income</div><div class="metric-value">${fmt(taxable)}</div></div>
+        <div class="metric-card"><div class="metric-label">${refund>=0?'Est. refund':'Est. owing'}</div><div class="metric-value" style="color:${refund>=0?'var(--green)':'var(--red)'}">${fmt(Math.abs(refund))}</div><div class="metric-sub">Tax withheld: ${fmt(withheld)}</div></div>
+      </div>
+      <div class="grid-2" style="margin-bottom:14px">
+        <div class="card">
+          <div class="section-row"><h3>Income</h3><button class="btn btn-sm btn-secondary" onclick="openAddTaxEntry('income')">+ Add</button></div>
+          ${td.income.length===0?`<div class="empty-state" style="padding:16px 0"><p>Add annual PAYG income here</p></div>`:''}
+          ${td.income.map(e=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div><div style="font-weight:500;font-size:14px">${e.source}</div><div style="font-size:12px;color:var(--text3)">${e.employer||''}</div></div>
+            <div style="display:flex;gap:6px;align-items:center"><span style="font-weight:600">${fmt(e.amount)}</span><button class="btn-ghost btn-sm" onclick="deleteTaxEntry('${key}','income','${e.id}')">✕</button></div>
+          </div>`).join('')}
+        </div>
+        <div class="card">
+          <div class="section-row"><h3>Deductions</h3><button class="btn btn-sm btn-secondary" onclick="openAddTaxEntry('deduction')">+ Add</button></div>
+          ${td.deductions.length===0?`<div class="empty-state" style="padding:16px 0"><p>Add work-related expenses, WFH etc.</p></div>`:''}
+          ${td.deductions.map(e=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div><div style="font-weight:500;font-size:14px">${e.description}</div><div style="font-size:12px;color:var(--text3)">${e.category||''}</div></div>
+            <div style="display:flex;gap:6px;align-items:center"><span style="font-weight:600;color:var(--green)">${fmt(e.amount)}</span><button class="btn-ghost btn-sm" onclick="deleteTaxEntry('${key}','deductions','${e.id}')">✕</button></div>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="section-row"><h3>Payment summaries</h3><button class="btn btn-sm btn-secondary" onclick="openAddTaxEntry('summary')">+ Add</button></div>
+        ${td.paymentSummaries.length===0?`<div class="empty-state" style="padding:16px 0"><p>Add PAYG payment summaries from your employer</p></div>`:''}
+        ${td.paymentSummaries.length?`<table><thead><tr><th>Employer</th><th>Gross</th><th>Tax withheld</th><th></th></tr></thead><tbody>
+          ${td.paymentSummaries.map(p=>`<tr><td>${p.employer}</td><td>${fmt(p.income)}</td><td class="text-red">${fmt(p.withheld)}</td>
+          <td><button class="btn-ghost btn-sm" onclick="deleteTaxEntry('${key}','paymentSummaries','${p.id}')">✕</button></td></tr>`).join('')}
+        </tbody></table>`:''}
+      </div>
+      <div class="card" style="background:var(--accent-light);border-color:#BFDBFE">
+        <div class="card-title" style="color:var(--accent)">ATO estimate — ${fyLabel(taxFY)}</div>
+        <div style="font-size:13px;color:var(--text2);line-height:2">
+          Gross: <strong>${fmt(totalIncome)}</strong> · Less deductions: <strong style="color:var(--green)">−${fmt(totalDed)}</strong> · Taxable: <strong>${fmt(taxable)}</strong><br>
+          Income tax: <strong style="color:var(--red)">${fmt(estTax)}</strong> · Tax withheld: <strong>${fmt(withheld)}</strong><br>
+          <hr style="margin:6px 0;border-color:#BFDBFE">
+          <strong style="font-size:15px;color:${refund>=0?'var(--green)':'var(--red)'}">${refund>=0?'Estimated refund':'Estimated tax owing'}: ${fmt(Math.abs(refund))}</strong>
+        </div>
+        <p style="font-size:11px;color:var(--text3);margin-top:8px">Excludes Medicare levy (2%), HECS-HELP, offsets. Consult a registered tax agent.</p>
+      </div>
+    </div>`;
+}
+function openAddTaxEntry(type){
+  if(!type){openModal('Add tax entry',`<div class="field"><label>Type</label><select id="tx-type"><option value="income">Income</option><option value="deduction">Deduction</option><option value="summary">Payment summary</option></select></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="openAddTaxEntry(document.getElementById('tx-type').value)">Next</button></div>`);return;}
+  const forms={
+    income:`<div class="field"><label>Source</label><input id="tx-source" placeholder="e.g. Wages"></div><div class="field"><label>Employer</label><input id="tx-employer" placeholder="e.g. Arrow Energy"></div><div class="field"><label>Amount ($)</label><input id="tx-amount" type="number" min="0" step="0.01"></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveTaxEntry('income')">Save</button></div>`,
+    deduction:`<div class="field"><label>Description</label><input id="tx-desc" placeholder="e.g. Work from home expenses"></div><div class="field"><label>Category</label><select id="tx-cat"><option>Work-related</option><option>Self-education</option><option>Travel</option><option>Charitable gifts</option><option>Investment</option><option>Other</option></select></div><div class="field"><label>Amount ($)</label><input id="tx-amount" type="number" min="0" step="0.01"></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveTaxEntry('deduction')">Save</button></div>`,
+    summary:`<div class="field"><label>Employer</label><input id="tx-employer" placeholder="e.g. Arrow Energy"></div><div class="input-row"><div class="field"><label>Gross income ($)</label><input id="tx-income" type="number" min="0" step="0.01"></div><div class="field"><label>Tax withheld ($)</label><input id="tx-withheld" type="number" min="0" step="0.01"></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveTaxEntry('summary')">Save</button></div>`
+  };
+  openModal({income:'Add income',deduction:'Add deduction',summary:'Add payment summary'}[type],forms[type]);
+}
+function saveTaxEntry(type){
+  const key=`${taxMemberFilter}_${taxFY}`;
+  if(!db.tax[key])db.tax[key]={income:[],deductions:[],paymentSummaries:[]};
+  const td=db.tax[key];
+  if(type==='income'){const source=document.getElementById('tx-source').value.trim();const employer=document.getElementById('tx-employer').value.trim();const amount=parseFloat(document.getElementById('tx-amount').value);if(!source||!amount){toast('Fill in all fields');return;}td.income.push({id:uid(),source,employer,amount});}
+  else if(type==='deduction'){const description=document.getElementById('tx-desc').value.trim();const category=document.getElementById('tx-cat').value;const amount=parseFloat(document.getElementById('tx-amount').value);if(!description||!amount){toast('Fill in all fields');return;}td.deductions.push({id:uid(),description,category,amount});}
+  else if(type==='summary'){const employer=document.getElementById('tx-employer').value.trim();const income=parseFloat(document.getElementById('tx-income').value);const withheld=parseFloat(document.getElementById('tx-withheld').value)||0;if(!employer||!income){toast('Fill in employer and income');return;}td.paymentSummaries.push({id:uid(),employer,income,withheld});}
+  save();closeModal();renderTax();toast('Saved');
+}
+function deleteTaxEntry(key,section,id){if(!db.tax[key])return;db.tax[key][section]=db.tax[key][section].filter(e=>e.id!==id);save();renderTax();}
+function calcTax(income){if(income<=18200)return 0;if(income<=45000)return Math.round((income-18200)*0.19);if(income<=120000)return Math.round(5092+(income-45000)*0.325);if(income<=180000)return Math.round(29467+(income-120000)*0.37);return Math.round(51667+(income-180000)*0.45);}
+
+// ── GOALS ──
+function renderGoals(){
+  const el=document.getElementById('page-goals');
+  el.innerHTML=`
+    <div class="page-header"><h2>Goals &amp; Savings</h2><p>Family savings targets</p></div>
+    <div class="page-content">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:14px"><button class="btn btn-primary btn-sm" onclick="openAddGoal()">+ New goal</button></div>
+      ${db.goals.length===0?`<div class="card"><div class="empty-state"><p>No goals yet.<br><br>Ideas: Holiday fund, Emergency fund (3 months = ${fmt(projectedTotal()*3)}), Home reno, Kids' savings</p></div></div>`:''}
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
+        ${db.goals.map(g=>{const pct=Math.min(100,Math.round(Number(g.saved||0)/Number(g.target)*100));const col=pct>=100?'var(--green)':pct>=50?'var(--accent)':'var(--amber)';const m=getMember(g.memberId);return`
+          <div class="card"><div style="display:flex;justify-content:space-between;margin-bottom:10px">
+            <div><div style="font-size:15px;font-weight:700">${g.name}</div>${m?`<div style="font-size:11px;color:var(--text3)">${m.name}</div>`:''}</div>
+            <button class="btn-ghost btn-sm" onclick="deleteGoal('${g.id}')">✕</button></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${col}"></div></div>
+          <div class="progress-labels" style="margin-bottom:10px"><span style="font-weight:600">${fmt(g.saved||0)}</span><span>of ${fmt(g.target)}</span></div>
+          <div style="display:flex;gap:6px"><input type="number" placeholder="Add amount" id="gi-${g.id}" style="flex:1;padding:7px 10px;font-size:13px;border:1px solid var(--border2);border-radius:var(--radius)" min="0" step="0.01">
+          <button class="btn btn-sm btn-primary" onclick="addToGoal('${g.id}')">Add</button></div></div>`;}).join('')}
+      </div>
+    </div>`;
+}
+function openAddGoal(){openModal('New savings goal',`<div class="field"><label>Goal name</label><input id="gn-name" placeholder="e.g. Holiday fund"></div><div class="field"><label>Family member</label><select id="gn-member">${db.members.map(m=>`<option value="${m.id}">${m.name}</option>`).join('')}</select></div><div class="input-row"><div class="field"><label>Target ($)</label><input id="gn-target" type="number" min="0" step="0.01"></div><div class="field"><label>Already saved ($)</label><input id="gn-saved" type="number" min="0" step="0.01" value="0"></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveGoal()">Create</button></div>`);}
+function saveGoal(){const name=document.getElementById('gn-name').value.trim();const memberId=document.getElementById('gn-member').value;const target=parseFloat(document.getElementById('gn-target').value);const saved=parseFloat(document.getElementById('gn-saved').value)||0;if(!name||!target){toast('Fill in name and target');return;}db.goals.push({id:uid(),name,memberId,target,saved});save();closeModal();renderGoals();toast('Goal created');}
+function addToGoal(id){const inp=document.getElementById('gi-'+id);const val=parseFloat(inp.value);if(!val||val<=0)return;const g=db.goals.find(g=>g.id===id);if(g){g.saved=Number(g.saved||0)+val;save();renderGoals();toast(`+${fmt(val)} added to ${g.name}`);}}
+function deleteGoal(id){db.goals=db.goals.filter(g=>g.id!==id);save();renderGoals();}
+
+// ── DEBT ──
+function renderDebt(){
+  const el=document.getElementById('page-debt');
+  const totalDebt=db.debts.reduce((s,d)=>s+Number(d.balance),0);
+  el.innerHTML=`
+    <div class="page-header"><h2>Debt</h2><p>Track home loan, car loans and other debts</p></div>
+    <div class="page-content">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        ${db.debts.length>0?`<div class="metric-card" style="max-width:220px"><div class="metric-label">Total debt</div><div class="metric-value text-red">${fmt(totalDebt)}</div></div>`:'<div></div>'}
+        <button class="btn btn-primary btn-sm" onclick="openAddDebt()">+ Add debt</button>
+      </div>
+      ${db.debts.length===0?`<div class="card"><div class="empty-state"><p>Add your debts here to track payoff progress.<br><br>From your statements: Home loan balance was $442,772.75 DR at 30 June 2026.</p></div></div>`:''}
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+        ${db.debts.map(d=>{const orig=Number(d.original||d.balance)||1;const pct=Math.min(100,Math.round((1-Number(d.balance)/orig)*100));const isPaidOff=Number(d.balance)<=0;const hasRate=Number(d.rate)>0;const rateClass=isPaidOff?'badge-green':!hasRate?'badge-amber':Number(d.rate)<5?'badge-green':Number(d.rate)<15?'badge-amber':'badge-red';const rateLabel=isPaidOff?'Paid off':hasRate?Number(d.rate).toFixed(2)+'%':'Rate TBC';return`
+          <div class="card"><div style="display:flex;justify-content:space-between;margin-bottom:8px">
+            <div><div style="font-size:15px;font-weight:700">${d.name}</div><div style="display:flex;gap:5px;margin-top:4px"><span class="badge ${rateClass}">${rateLabel}</span><span class="badge badge-blue">${d.type}</span></div></div>
+            <button class="btn-ghost btn-sm" onclick="openEditDebt('${d.id}')">✎</button><button class="btn-ghost btn-sm" onclick="deleteDebt('${d.id}')">✕</button></div>
+          <div style="font-size:22px;font-weight:700;color:var(--red);margin:8px 0">${fmt(d.balance)}</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:var(--green)"></div></div>
+          <div class="progress-labels" style="margin-bottom:10px"><span>${pct}% paid off</span><span>from ${fmt(orig)}</span></div>
+          ${d.note?`<div style="font-size:12px;color:var(--text3);margin-bottom:10px">${d.note}</div>`:''}
+          <div style="display:flex;gap:6px"><input type="number" placeholder="Payment" id="dp-${d.id}" style="flex:1;padding:7px 10px;font-size:13px;border:1px solid var(--border2);border-radius:var(--radius)" min="0" step="0.01">
+          <button class="btn btn-sm btn-primary" onclick="makeDebtPayment('${d.id}')">Pay</button></div></div>`;}).join('')}
+      </div>
+    </div>`;
+}
+function openAddDebt(){openModal('Add debt',`<div class="field"><label>Name</label><input id="db-name" placeholder="e.g. Macquarie Home Loan"></div><div class="field"><label>Type</label><select id="db-type"><option>Home loan</option><option>Car loan</option><option>Personal loan</option><option>Credit card</option><option>HECS-HELP</option><option>Zip</option><option>Other</option></select></div><div class="input-row"><div class="field"><label>Current balance ($)</label><input id="db-balance" type="number" min="0" step="0.01" placeholder="e.g. 442772.75"></div><div class="field"><label>Interest rate (% p.a.)</label><input id="db-rate" type="number" min="0" step="0.01" placeholder="e.g. 6.25"></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveDebt()">Add</button></div>`);}
+function saveDebt(){const name=document.getElementById('db-name').value.trim();const type=document.getElementById('db-type').value;const balance=parseFloat(document.getElementById('db-balance').value);const rate=parseFloat(document.getElementById('db-rate').value)||0;if(!name||!balance){toast('Fill in name and balance');return;}db.debts.push({id:uid(),name,type,balance,original:balance,rate});save();closeModal();renderDebt();toast('Debt added');}
+function makeDebtPayment(id){const inp=document.getElementById('dp-'+id);const val=parseFloat(inp.value);if(!val||val<=0)return;const d=db.debts.find(d=>d.id===id);if(d){d.balance=Math.max(0,Number(d.balance)-val);save();renderDebt();toast(`Payment of ${fmt(val)} recorded`);}}
+function deleteDebt(id){db.debts=db.debts.filter(d=>d.id!==id);save();renderDebt();}
+function openEditDebt(id){const d=db.debts.find(d=>d.id===id);if(!d)return;openModal('Edit debt',`<div class="field"><label>Name</label><input id="ed-name" value="${d.name.replace(/"/g,'&quot;')}"></div><div class="input-row"><div class="field"><label>Current balance ($)</label><input id="ed-balance" type="number" min="0" step="0.01" value="${d.balance}"></div><div class="field"><label>Interest rate (% p.a.)</label><input id="ed-rate" type="number" min="0" step="0.01" value="${d.rate||''}" placeholder="e.g. 6.25"></div></div><div class="field"><label>Note</label><input id="ed-note" value="${(d.note||'').replace(/"/g,'&quot;')}"></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveEditDebt('${id}')">Save</button></div>`);}
+function saveEditDebt(id){const d=db.debts.find(d=>d.id===id);if(!d)return;d.name=document.getElementById('ed-name').value.trim()||d.name;d.balance=parseFloat(document.getElementById('ed-balance').value)||d.balance;d.rate=parseFloat(document.getElementById('ed-rate').value)||0;d.note=document.getElementById('ed-note').value.trim();save();closeModal();renderDebt();toast('Debt updated');}
+
+// ── PDF IMPORT ──
+function renderImport(){
+  const el=document.getElementById('page-import');
+  el.innerHTML=`
+    <div class="page-header"><h2>PDF Import</h2><p>Drop a bank statement or payslip — AI extracts figures automatically</p></div>
+    <div class="page-content">
+      <div class="card" style="margin-bottom:14px">
+        <div class="drop-zone" id="drop-zone" onclick="document.getElementById('pdf-input').click()" ondragover="dzDragOver(event)" ondragleave="dzDragLeave()" ondrop="dzDrop(event)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="12 18 12 12 9 15"/><polyline points="12 12 15 15"/></svg>
+          <p style="font-size:15px;font-weight:500;margin-bottom:4px">Drop a PDF here, or tap to browse</p>
+          <span style="font-size:13px">Macquarie bank statements, payslips</span>
+        </div>
+        <input type="file" id="pdf-input" accept=".pdf" style="display:none" onchange="handlePDFFile(this.files[0])">
+        <div id="import-status" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
+        <div class="section-row"><h3>Import history</h3></div>
+        ${db.imports.length===0?`<div class="empty-state"><p>No imports yet</p></div>`:`
+        <table><thead><tr><th>File</th><th>Date</th><th>Type</th><th>Summary</th><th></th></tr></thead><tbody>
+          ${db.imports.slice().reverse().map(imp=>`<tr>
+            <td style="font-weight:500;font-size:13px">${imp.filename}</td>
+            <td style="font-size:12px;color:var(--text3)">${new Date(imp.date).toLocaleDateString('en-AU')}</td>
+            <td><span class="badge badge-blue">${imp.docType||'PDF'}</span></td>
+            <td style="font-size:12px">${imp.summary||'—'}</td>
+            <td><button class="btn-ghost btn-sm" onclick="deleteImport('${imp.id}')">✕</button></td>
+          </tr>`).join('')}
+        </tbody></table>`}
+      </div>
+    </div>`;
+}
+function dzDragOver(e){e.preventDefault();document.getElementById('drop-zone').classList.add('drag-over');}
+function dzDragLeave(){document.getElementById('drop-zone').classList.remove('drag-over');}
+function dzDrop(e){e.preventDefault();dzDragLeave();const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')handlePDFFile(f);}
+async function handlePDFFile(file){
+  if(!file)return;
+  const status=document.getElementById('import-status');
+  status.innerHTML=`<div style="color:var(--text3);font-size:14px">⏳ Reading PDF…</div>`;
+  try{
+    const ab=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:ab}).promise;
+    let text='';
+    for(let i=1;i<=Math.min(pdf.numPages,6);i++){const page=await pdf.getPage(i);const content=await page.getTextContent();text+=content.items.map(item=>item.str).join(' ')+'\n';}
+    status.innerHTML=`<div style="color:var(--text3);font-size:14px">⏳ Analysing with AI…</div>`;
+    await analyseWithAI(file.name,text,status);
+  }catch(err){status.innerHTML=`<div class="import-result" style="color:var(--red)">Could not read PDF: ${err.message}</div>`;}
+}
+async function analyseWithAI(filename,text,statusEl){
+  const prompt=`You are a financial document analyser for an Australian family (Corey & Alexandra Rush, Chinchilla QLD). They bank with Macquarie.
+Analyse this PDF text and extract key financial figures.
+
+Document text:
+${text.slice(0,2500)}
+
+Respond ONLY with JSON (no markdown):
+{"docType":"Bank Statement"|"Payslip"|"Invoice"|"Tax Document"|"Other","summary":"one sentence","figures":[{"label":"description","amount":0.00,"type":"income|expense|withheld|balance|other"}],"suggestedMember":"Corey or Alexandra if identifiable, else null","period":"period string or null"}`;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const data=await res.json();
+    const raw=data.content.map(c=>c.text||'').join('');
+    let parsed;try{parsed=JSON.parse(raw.replace(/```json|```/g,''));}catch(e){throw new Error('Could not parse AI response');}
+    const figHtml=parsed.figures.map(f=>{const color=f.type==='income'?'var(--green)':f.type==='expense'?'var(--red)':f.type==='withheld'?'var(--amber)':'var(--text)';return`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)"><span>${f.label}</span><span style="font-weight:600;color:${color}">${fmt(f.amount)}</span></div>`;}).join('');
+    const suggestedId=db.members.find(m=>m.name===parsed.suggestedMember)?.id||db.members[0]?.id;
+    statusEl.innerHTML=`<div class="import-result"><strong>Type:</strong> ${parsed.docType} &nbsp;·&nbsp; <strong>Summary:</strong> ${parsed.summary}${parsed.period?` &nbsp;·&nbsp; <strong>Period:</strong> ${parsed.period}`:''}
+      <div style="margin-top:8px">${figHtml}</div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span style="font-size:12px;color:var(--text3)">Apply to:</span>
+      <select id="imp-member" style="width:auto">${db.members.map(m=>`<option value="${m.id}" ${m.id===suggestedId?'selected':''}>${m.name}</option>`).join('')}</select>
+      <button class="btn btn-sm btn-primary" onclick="applyImport(${JSON.stringify(parsed).replace(/'/g,'&#39;')})">Apply to budget</button></div></div>`;
+    db.imports.push({id:uid(),filename,date:new Date().toISOString(),docType:parsed.docType,summary:parsed.summary,figures:parsed.figures});save();
+  }catch(err){
+    const isOffClaude=err instanceof TypeError||/fetch|network|Failed to fetch/i.test(err.message||'');
+    if(isOffClaude){
+      const preview=text.slice(0,1200).trim();
+      statusEl.innerHTML=`<div class="import-result">
+        <div style="color:var(--amber);font-weight:600;margin-bottom:6px">⚠️ AI summary isn't available outside Claude</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Open this portal from your Claude conversation to get automatic AI parsing. For now, here's the raw extracted text so you can enter figures manually:</div>
+        <div style="max-height:180px;overflow-y:auto;background:var(--surface2);border-radius:var(--radius);padding:10px;font-size:11px;font-family:monospace;white-space:pre-wrap">${preview.replace(/</g,'&lt;')}${text.length>1200?'…':''}</div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span style="font-size:12px;color:var(--text3)">Log this manually on:</span>
+        <button class="btn btn-sm btn-secondary" onclick="goTo('income')">Income page</button>
+        <button class="btn btn-sm btn-secondary" onclick="goTo('bills')">Bills page</button></div>
+      </div>`;
+      db.imports.push({id:uid(),filename,date:new Date().toISOString(),docType:'Other',summary:'Uploaded outside Claude — entered manually',figures:[]});save();
+    }else{
+      statusEl.innerHTML=`<div class="import-result" style="color:var(--red)">AI analysis failed: ${err.message}</div>`;
+    }
+  }
+}
+function applyImport(parsed){
+  const mid=document.getElementById('imp-member')?.value;if(!mid)return;
+  if(!db.budget[budgetMonth])db.budget[budgetMonth]={};if(!db.budget[budgetMonth][mid])db.budget[budgetMonth][mid]=[];
+  let count=0;parsed.figures.forEach(f=>{if(f.type==='income'||f.type==='expense'){db.budget[budgetMonth][mid].push({id:uid(),type:f.type,description:f.label,amount:f.amount,category:'Imported'});count++;}});
+  save();toast(`${count} entries applied to ${memberName(mid)}'s budget`);
+}
+function deleteImport(id){db.imports=db.imports.filter(i=>i.id!==id);save();renderImport();}
+
+// ── SETTINGS ──
+function renderSettings(){
+  const el=document.getElementById('page-settings');
+  el.innerHTML=`
+    <div class="page-header"><h2>Settings</h2></div>
+    <div class="page-content">
+      <div class="card" style="margin-bottom:14px">
+        <div class="section-row"><h3>Family members</h3><button class="btn btn-primary btn-sm" onclick="openAddMember()">+ Add</button></div>
+        ${db.members.map(m=>{const col=memberColor(m.id);return`<div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border)">
+          <div class="avatar" style="background:${col}22;color:${col};width:38px;height:38px;font-size:14px">${initials(m.name)}</div>
+          <div style="flex:1"><div style="font-weight:600">${m.name}</div><div style="font-size:12px;color:var(--text3)">${m.role||'Family member'} · PIN: ${m.pin?'set':'not set'}</div></div>
+          <button class="btn btn-sm btn-secondary" onclick="openEditMember('${m.id}')">Edit</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteMember('${m.id}')">Remove</button>
+        </div>`;}).join('')}
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="section-row"><h3>Data</h3></div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:12px">${FIREBASE_READY?'Data syncs live across every device signed in to this portal.':'Data syncs across devices while used inside Claude. Add a Firebase config in the code to sync on any hosted device too.'} Still worth exporting a backup now and then.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary" onclick="manualSync()">🔄 Sync now</button>
+          <button class="btn btn-secondary" onclick="exportData()">⬇ Export backup</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">⬆ Import backup</button>
+          ${FIREBASE_READY?'<button class="btn btn-secondary" onclick="authSignOut()">🚪 Sign out</button>':''}
+          <button class="btn btn-danger" onclick="clearAllData()">🗑 Clear all data</button>
+        </div>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importBackup(this)">
+      </div>
+      <div class="card">
+        <div class="card-title">About</div>
+        <p style="font-size:13px;color:var(--text2);line-height:1.7">Family Finance Portal · Rush family, Chinchilla QLD · ${FIREBASE_READY?'Synced via Firebase — works from Claude or any browser this page is hosted in':'Data syncs across devices via shared cloud storage while inside Claude'} · Bills verified from Macquarie statements June 2026 · PDF analysis by Claude AI (only available when opened inside Claude) · ATO 2024–25 tax rates · For guidance only — consult a qualified financial adviser or registered tax agent.</p>
+      </div>
+    </div>`;
+}
+function openAddMember(){openModal('Add family member',`<div class="field"><label>Full name</label><input id="nm-name" placeholder="e.g. Tom, Jessica"></div><div class="field"><label>Role</label><input id="nm-role" placeholder="e.g. Parent, Child"></div><div class="field"><label>4-digit PIN (optional)</label><input id="nm-pin" type="password" maxlength="4"></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveMember()">Add</button></div>`);}
+function openEditMember(id){const m=getMember(id);if(!m)return;openModal('Edit member',`<div class="field"><label>Name</label><input id="em-name" value="${m.name}"></div><div class="field"><label>Role</label><input id="em-role" value="${m.role||''}"></div><div class="field"><label>New PIN (blank = keep current)</label><input id="em-pin" type="password" maxlength="4"></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="updateMember('${id}')">Save</button></div>`);}
+function saveMember(){const name=document.getElementById('nm-name').value.trim();const role=document.getElementById('nm-role').value.trim();const pin=document.getElementById('nm-pin').value.trim();if(!name){toast('Enter a name');return;}if(pin&&(pin.length!==4||!/^\d+$/.test(pin))){toast('PIN must be 4 digits');return;}db.members.push({id:uid(),name,role,pin:pin||null});save();closeModal();renderSettings();toast(`${name} added`);}
+function updateMember(id){const m=getMember(id);if(!m)return;m.name=document.getElementById('em-name').value.trim();m.role=document.getElementById('em-role').value.trim();const pin=document.getElementById('em-pin').value.trim();if(pin){if(pin.length!==4||!/^\d+$/.test(pin)){toast('PIN must be 4 digits');return;}m.pin=pin;}save();closeModal();renderSettings();toast('Updated');}
+function deleteMember(id){if(!confirm('Remove member?'))return;db.members=db.members.filter(m=>m.id!==id);save();renderSettings();}
+function exportData(){const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`rush-finance-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);toast('Backup exported');}
+function importBackup(input){const file=input.files[0];if(!file)return;const reader=new FileReader();reader.onload=async e=>{try{const imp=JSON.parse(e.target.result);if(!imp.members)throw new Error();if(confirm('Replace all data on every device?')){db=imp;await save();location.reload();}}catch{toast('Invalid backup file');}};reader.readAsText(file);}
+function clearAllData(){if(confirm('Clear ALL data? This affects every device using this portal.')){storageDelete(STORAGE_KEY).catch(()=>{}).finally(()=>location.reload());}}
+
+// ── INIT ──
+(async function init(){
+  const app=document.getElementById('app');
+  if(app)app.style.display='none';
+  if(FIREBASE_READY){
+    firebase.auth().onAuthStateChanged(async user=>{
+      if(user){
+        firebaseUser=user;
+        document.getElementById('auth-screen').style.display='none';
+        await load();
+        attachRealtimeListener();
+        showLockScreen();
+      }else{
+        firebaseUser=null;
+        currentUser=null;
+        document.getElementById('lock-screen').classList.remove('open');
+        if(app)app.style.display='none';
+        document.getElementById('auth-screen').style.display='flex';
+      }
+    });
+  }else{
+    await load();
+    showLockScreen();
+  }
+})();
+</script>
+</body>
+</html>
