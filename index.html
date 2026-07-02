@@ -232,14 +232,12 @@ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/p
 // 3. Create two users under Authentication (e.g. Corey's and Alexandra's email + a password each)
 // 4. In Realtime Database → Rules, paste: {"rules":{".read":"auth != null",".write":"auth != null"}}
 // 5. Project settings → your apps → Web app → copy the config object below
-const firebaseConfig = {
-  apiKey: "AIzaSyDi7dn_AnLeyA72ChKBHoc5ssFjQndIihU",
-  authDomain: "rush-family-finances.firebaseapp.com",
-  databaseURL: "https://rush-family-finances-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "rush-family-finances",
-  storageBucket: "rush-family-finances.firebasestorage.app",
-  messagingSenderId: "462612653933",
-  appId: "1:462612653933:web:2510c093b891f6a293dc64"
+const firebaseConfig={
+  apiKey:"AIzaSyAyLWXsnjqfvbGrdDFBeGsjdWW0gdfr7Hw",
+  authDomain:"rush-family-finaces.firebaseapp.com",
+  databaseURL:"https://rush-family-finaces-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"rush-family-finaces",
+  appId:"1:913097148559:web:a59b7509a5ea8bc7cdc8fa"
 };
 const FIREBASE_READY=firebaseConfig.apiKey!=='PASTE_YOUR_API_KEY';
 if(FIREBASE_READY){firebase.initializeApp(firebaseConfig);}
@@ -1078,7 +1076,7 @@ function saveEditDebt(id){const d=db.debts.find(d=>d.id===id);if(!d)return;d.nam
 function renderImport(){
   const el=document.getElementById('page-import');
   el.innerHTML=`
-    <div class="page-header"><h2>PDF Import</h2><p>Drop a bank statement or payslip — AI extracts figures automatically</p></div>
+    <div class="page-header"><h2>PDF Import</h2><p>Drop a Macquarie statement or payslip — figures extracted automatically, right in your browser</p></div>
     <div class="page-content">
       <div class="card" style="margin-bottom:14px">
         <div class="drop-zone" id="drop-zone" onclick="document.getElementById('pdf-input').click()" ondragover="dzDragOver(event)" ondragleave="dzDragLeave()" ondrop="dzDrop(event)">
@@ -1115,10 +1113,140 @@ async function handlePDFFile(file){
     const ab=await file.arrayBuffer();
     const pdf=await pdfjsLib.getDocument({data:ab}).promise;
     let text='';
-    for(let i=1;i<=Math.min(pdf.numPages,6);i++){const page=await pdf.getPage(i);const content=await page.getTextContent();text+=content.items.map(item=>item.str).join(' ')+'\n';}
-    status.innerHTML=`<div style="color:var(--text3);font-size:14px">⏳ Analysing with AI…</div>`;
+    const maxPages=pdf.numPages; // read all pages — statements can be long
+    for(let i=1;i<=maxPages;i++){const page=await pdf.getPage(i);const content=await page.getTextContent();text+=content.items.map(item=>item.str).join(' ')+'\n';}
+    // Try the built-in Macquarie parser first (works fully offline / on GitHub Pages)
+    const parsedLocal=parseMacquarieStatement(text);
+    if(parsedLocal){showParsedStatement(file.name,parsedLocal,status);return;}
+    const parsedSlip=parsePayslip(text);
+    if(parsedSlip){showParsedStatement(file.name,parsedSlip,status);return;}
+    // Not a recognised Macquarie format → try AI (only works inside Claude), else raw text
+    status.innerHTML=`<div style="color:var(--text3);font-size:14px">⏳ Analysing…</div>`;
     await analyseWithAI(file.name,text,status);
   }catch(err){status.innerHTML=`<div class="import-result" style="color:var(--red)">Could not read PDF: ${err.message}</div>`;}
+}
+
+// ── MACQUARIE STATEMENT PARSER (offline, no AI needed) ──
+const MONTHS={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+const CATEGORY_RULES=[
+  {cat:'Groceries',kw:['WOOLWORTHS','COLES','ALDI','IGA','DRAKE SUPERMARKET','FOODWORKS','CHAPLAIN SUPERMARKET','SPANOS SUPA','WESTERN BAKERIES','CHOICE COUNTRY']},
+  {cat:'Health & wellbeing',kw:['YOUR HEALTH STORE','DALBY HEALTH','CENTRAL HEALTH','HEALTH FOODS','PHARMACY','CHEMIST','PHARMA','MEDICAL','DENTAL','SMILES','CHIROPRACT','CHINCHILLA FAMILY CHIR','WOMEN\'S HEALTH','SULLIVAN NICOLAIDES','PATHOLOGY','OPTO','EYECARE','EYEWEAR','SPECSAVERS','BODYCARE','PHYSIO','VITAL.LY','NOURISHED','OAK ORGANICS','FORAGED FOR YOU','PACHAMAMA','ELDERBERRY']},
+  {cat:'Fuel & transport',kw:['BP ','AMPOL','MOBIL','UNITED PETROLEUM','LIBERTY','CALTEX','FUEL','LINKT','WILSON PARKING','TRANSPORTMAINRDS','PARKING','CARWASH','CAR WASH','REPCO','SUPERCHEAP AUTO']},
+  {cat:'Dining & takeaway',kw:['MCDONALD','KFC','SUBWAY','DOMINO','HUNGRY JACK','GYG','GUZMAN','GRILLD','RED ROOSTER','CAFE','COFFEE','KEBAB','SUSHI','PIZZA','BOBA','SMOKO','DONUT','BAKERY','RESTAURANT','TAVERNA','HJS ','MASALA','DASH N SIP','JIMMY JAMES','MERRITTS','CHARLEYS CREEK','SHENANIGANS','BUMBLE BEAN']},
+  {cat:'Kids & activities',kw:['GYMNASTIC','SWIM','SWIMMING','TENNIS','KARATE','SOCCER','FOOTBALL','RUGBY','TOUCH','POLOCRO','AQUATICFIT','FIT TRIBE','DANCE','SINGING','BABYSITTING','POL-AUSSIE','SCHOOL','CHRISTIAN C','GATTON SOCCER','MYSIDELINE','ICEWORLD','IFLY','TOYWORLD','TOYS']},
+  {cat:'Utilities & subscriptions',kw:['STARLINK','NETFLIX','APPLE.COM','SPOTIFY','AUDIBLE','XBOX','MICROSOFT','PLAYSTATION','ALDIMOBILE','ALDI MOBILE','ERGON','TELSTRA','OPTUS','PHONE CARE']},
+  {cat:'Shopping & household',kw:['KMART','TARGET','BIG W','BEST AND LESS','REJECT SHOP','HARVEY NORMAN','BUNNINGS','KEATING BROS','MURILLA HARDWARE','MENSLAND','PETUNIAS','LORNA JANE','MIMCO','CONNOR','AMAZON','TEMPLE & WEBSTER','ECOSA','BABY BUNTING','BUBS N GRUBS','PUREBABY','KIIN BABY','SABLE BEBE','BABYBUB','CNW ELECTRICAL','ONE STOP IT','HIGHGROVE','BETTA HOME','GARDEN CENT','NAIL STAR','AC COSMETICS','GK BEAUTY','BEAUTY BED','PETER ALEXANDER','PAPINELLE','HOUSE ']},
+  {cat:'Donations',kw:['COMPASSION AUSTRALIA','LIFEFLIGHT','ST VINNIES','ST VINCENT']},
+  {cat:'Cash & transfers',kw:['WITHDRAWAL','ATM']}
+];
+function categorise(desc){
+  const u=desc.toUpperCase();
+  for(const r of CATEGORY_RULES){if(r.kw.some(k=>u.includes(k)))return r.cat;}
+  return 'Other';
+}
+function parseAmt(s){return parseFloat(String(s).replace(/,/g,''));}
+function parseMacquarieStatement(text){
+  if(!/Macquarie/i.test(text)||!/Transaction Listing Report/i.test(text))return null;
+  // Statement period
+  let period=null;const pm=text.match(/From\s+(\d{1,2}\s+\w+\s+\d{4})\s+to\s+(\d{1,2}\s+\w+\s+\d{4})/i);
+  if(pm)period=`${pm[1]} – ${pm[2]}`;
+  // Account holder / suggested member
+  let suggestedMember=null;
+  const nameMatch=text.match(/Account Name\s+([A-Za-z ]+?)(?:Corey|Alexandra|Macquarie|BSB)/);
+  if(/Corey Douglas Rush and Alexandra/i.test(text)||/Alexandra Mary Hope\s*&\s*Corey/i.test(text))suggestedMember=null;
+  // Opening & closing balances.
+  // The overview header flattens to "...= Closing balance <opening#> CR ...", which is misleading,
+  // so we take opening from the LAST "Opening balance" occurrence (transactions section) and
+  // closing from the final CR/DR figure in the whole document.
+  let opening=null,closing=null;
+  const obAll=[...text.matchAll(/Opening balance\s+([\d,]+\.\d{2})\s*(CR|DR)/gi)];
+  if(obAll.length)opening=parseAmt(obAll[obAll.length-1][1]);
+  const allBal=[...text.matchAll(/([\d,]+\.\d{2})\s*(CR|DR)/g)];
+  if(allBal.length)closing=parseAmt(allBal[allBal.length-1][1]);
+  // Transactions: match "Mon DD ... <debit or credit> <running balance> CR/DR"
+  // Amounts appear as the last two decimals on a line: the txn amount then the balance.
+  const txns=[];
+  const re=/((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2})\s+(.+?)\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s*(CR|DR)/g;
+  let m,prevBal=opening;
+  while((m=re.exec(text))!==null){
+    const dateStr=m[1],desc=m[2].replace(/\s+/g,' ').trim(),amt=parseAmt(m[3]),bal=parseAmt(m[4]);
+    if(/Opening balance|Closing balance|Total (debits|credits)/i.test(desc))continue;
+    // Decide debit vs credit by comparing running balance to previous balance
+    let type='expense';
+    if(prevBal!==null){type=bal>prevBal+0.001?'income':'expense';}
+    else{type=/From linked|Recurring|Refund|Interest Payment|Medicare|Work|Wage/i.test(desc)?'income':'expense';}
+    prevBal=bal;
+    // Skip internal shuffles between the family's own linked accounts (avoids double counting)
+    const isInternal=/linked account|Internal transfer/i.test(desc);
+    txns.push({date:dateStr,description:desc,amount:amt,balance:bal,type,internal:isInternal,category:categorise(desc)});
+  }
+  if(txns.length===0)return null;
+  // Build category summary from external (non-internal) spend & real income
+  const external=txns.filter(t=>!t.internal);
+  const spendByCat={};let totalOut=0,totalIn=0;
+  external.forEach(t=>{if(t.type==='expense'){spendByCat[t.category]=(spendByCat[t.category]||0)+t.amount;totalOut+=t.amount;}else{totalIn+=t.amount;}});
+  const figures=Object.entries(spendByCat).sort((a,b)=>b[1]-a[1]).map(([label,amount])=>({label,amount,type:'expense'}));
+  if(totalIn>0)figures.unshift({label:'Money in (excl. internal transfers)',amount:totalIn,type:'income'});
+  return{docType:'Bank Statement',summary:`${external.length} external transactions${period?' · '+period:''} · ${fmt(totalOut)} out`,period,figures,transactions:txns,opening,closing,totalOut,totalIn,suggestedMember,parser:'macquarie'};
+}
+function parsePayslip(text){
+  if(!/(payslip|pay slip|pay advice|earnings|gross pay|net pay|superannuation)/i.test(text))return null;
+  const grab=(labels)=>{for(const l of labels){const m=text.match(new RegExp(l+'[^\\d]{0,20}([\\d,]+\\.\\d{2})','i'));if(m)return parseAmt(m[1]);}return null;};
+  const gross=grab(['gross pay','gross earnings','total earnings','gross']);
+  const net=grab(['net pay','net earnings','pay this period','banked']);
+  const tax=grab(['paye','payg','tax','withheld','withholding']);
+  const supern=grab(['superannuation','super guarantee','super']);
+  if(!gross&&!net)return null;
+  let suggestedMember=null;
+  if(/coho/i.test(text))suggestedMember='Corey';else if(/arrow/i.test(text))suggestedMember='Alexandra';
+  const figures=[];
+  if(gross)figures.push({label:'Gross pay',amount:gross,type:'income'});
+  if(net)figures.push({label:'Net pay (banked)',amount:net,type:'income'});
+  if(tax)figures.push({label:'Tax withheld',amount:tax,type:'withheld'});
+  if(supern)figures.push({label:'Superannuation',amount:supern,type:'other'});
+  return{docType:'Payslip',summary:`Payslip${suggestedMember?' — '+suggestedMember:''}${net?' · net '+fmt(net):''}`,figures,suggestedMember,parser:'payslip'};
+}
+function showParsedStatement(filename,parsed,statusEl){
+  const suggestedId=db.members.find(m=>m.name===parsed.suggestedMember)?.id||db.members[0]?.id;
+  const figHtml=parsed.figures.map(f=>{const color=f.type==='income'?'var(--green)':f.type==='expense'?'var(--red)':f.type==='withheld'?'var(--amber)':'var(--text)';return`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span>${f.label}</span><span style="font-weight:600;color:${color}">${fmt(f.amount)}</span></div>`;}).join('');
+  const months=lastMonths(6);
+  const defaultMonth=guessMonthFromPeriod(parsed.period)||budgetMonth;
+  const balLine=(parsed.opening!=null||parsed.closing!=null)?`<div style="font-size:12px;color:var(--text3);margin-top:6px">Opening ${parsed.opening!=null?fmt(parsed.opening):'—'} → Closing ${parsed.closing!=null?fmt(parsed.closing):'—'}</div>`:'';
+  const stash=encodeURIComponent(JSON.stringify(parsed));
+  statusEl.innerHTML=`<div class="import-result">
+    <div style="color:var(--green);font-weight:600;margin-bottom:4px">✅ Parsed automatically — no AI needed</div>
+    <div style="font-size:13px"><strong>Type:</strong> ${parsed.docType}${parsed.period?` &nbsp;·&nbsp; <strong>Period:</strong> ${parsed.period}`:''}</div>
+    <div style="font-size:12px;color:var(--text2);margin:4px 0 8px">${parsed.summary}</div>
+    <div>${figHtml}</div>${balLine}
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:12px;color:var(--text3)">Apply to</span>
+      <select id="imp-member" style="width:auto">${db.members.map(m=>`<option value="${m.id}" ${m.id===suggestedId?'selected':''}>${m.name}</option>`).join('')}</select>
+      <select id="imp-month" style="width:auto">${months.map(mo=>`<option value="${mo.value}" ${mo.value===defaultMonth?'selected':''}>${mo.label}</option>`).join('')}</select>
+      <button class="btn btn-sm btn-primary" onclick="applyParsed('${stash}')">Apply to budget</button>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px">Internal transfers between your own Macquarie accounts are excluded so nothing's double-counted.</div>
+  </div>`;
+  db.imports.push({id:uid(),filename,date:new Date().toISOString(),docType:parsed.docType,summary:parsed.summary,figures:parsed.figures});save();renderImportHistoryOnly();
+}
+function lastMonths(n){const arr=[];const now=new Date();for(let i=0;i<n;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);arr.push({value:d.toISOString().slice(0,7),label:d.toLocaleDateString('en-AU',{month:'long',year:'numeric'})});}return arr;}
+function guessMonthFromPeriod(period){if(!period)return null;const m=period.match(/(\w+)\s+(\d{4})/);if(m&&MONTHS[m[1].slice(0,3)]!==undefined){return `${m[2]}-${String(MONTHS[m[1].slice(0,3)]+1).padStart(2,'0')}`;}return null;}
+function renderImportHistoryOnly(){if(activePage==='import')renderImport();}
+function applyParsed(stash){
+  const parsed=JSON.parse(decodeURIComponent(stash));
+  const mid=document.getElementById('imp-member')?.value;const month=document.getElementById('imp-month')?.value||budgetMonth;
+  if(!mid)return;
+  if(!db.budget[month])db.budget[month]={};if(!db.budget[month][mid])db.budget[month][mid]=[];
+  let count=0;
+  if(parsed.transactions){
+    // Bank statement: add each external transaction, categorised
+    parsed.transactions.filter(t=>!t.internal).forEach(t=>{
+      db.budget[month][mid].push({id:uid(),type:t.type,description:t.description,amount:t.amount,category:t.type==='income'?'Wages':t.category});count++;
+    });
+  }else{
+    // Payslip: add income & withheld figures
+    parsed.figures.forEach(f=>{if(f.type==='income'){db.budget[month][mid].push({id:uid(),type:'income',description:f.label,amount:f.amount,category:'Wages'});count++;}});
+  }
+  save();toast(`${count} entries applied to ${memberName(mid)}'s budget`);
 }
 async function analyseWithAI(filename,text,statusEl){
   const prompt=`You are a financial document analyser for an Australian family (Corey & Alexandra Rush, Chinchilla QLD). They bank with Macquarie.
